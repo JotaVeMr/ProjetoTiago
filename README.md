@@ -79,7 +79,21 @@ Com base nas necessidades identificadas — como facilidade de uso, notificaçõ
 A arquitetura será baseada em **camadas independentes**, separando claramente as responsabilidades entre regras de negócio, interface, dados e serviços externos. Isso melhora a **manutenibilidade**, **testabilidade** e **escalabilidade** do projeto.
 
  ## Tecnologia Ultilizadas :
- -Flutter
+ -Flutter --
  -SqlLite(Para o banco de dados)
+
+ ### Icon Software
+ ![Arquitetura do App](image/icon.png)
+
+ ### Logo Aplicativo
+ ![Arquitetura do App](image/logo.png)
+
+ - **Cores padrão:**  
+  O aplicativo utilizará uma paleta composta por **branco**, **azul** e **vermelho**, buscando uma combinação visualmente agradável, com contraste adequado e boa legibilidade, especialmente para usuários com maior sensibilidade visual (como idosos).
+
+-  **Fonte utilizada:**  
+  A tipografia escolhida será a **Arial**, uma fonte clássica e amplamente reconhecida por sua **leitura fácil**, simplicidade e compatibilidade com múltiplos dispositivos e sistemas operacionais.
+
+Essas escolhas visam proporcionar uma **experiência limpa, acessível e coerente**, em sintonia com os melhores padrões de design encontrados nos aplicativos atuais de saúde e bem-estar.
 
  
