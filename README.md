@@ -79,7 +79,7 @@ Com base nas necessidades identificadas — como facilidade de uso, notificaçõ
 A arquitetura será baseada em **camadas independentes**, separando claramente as responsabilidades entre regras de negócio, interface, dados e serviços externos. Isso melhora a **manutenibilidade**, **testabilidade** e **escalabilidade** do projeto.
 
  ## Tecnologia Ultilizadas :
- -Flutter --
+ -Flutter  
  -SqlLite(Para o banco de dados)
 
  ### Icon Software
