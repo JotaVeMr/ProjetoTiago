@@ -59,7 +59,7 @@
 
  Pontos Fracos:
 - Algumas funcionalidades ainda estão em desenvolvimento.
-- Falta de feedback visual para indicar em qual tela o usuário está.
+- Falta de feedback visual para indicar em qual tela o usuário está(Hover).
 - Ausência de recursos avançados como exportação de relatórios ou acompanhamento de sintomas.
 
 ---
