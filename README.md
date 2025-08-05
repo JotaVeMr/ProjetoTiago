@@ -11,14 +11,14 @@
 
 ##  1. Medisafe
 
- Pontos Fortes:
+ **Pontos Fortes**:
 - Interface amigável e intuitiva, com tela inicial em formato de calendário.
 - Botões de atalho para adicionar medicamentos de forma rápida.
 - Tela de atualizações com funcionalidades como consultas médicas e monitor de saúde.
 - Tela dedicada para adição de medicamentos, com layout didático.
 - Aba “Mais” com recursos como diário, reposição de medicamentos, configurações e personalização de tema (cor de fundo).
 
- Pontos Fracos:
+ **Pontos Fracos**:
 - Algumas funcionalidades exigem conexão com a internet.
 - Ausência de suporte ampliado a idiomas regionais.
 
@@ -26,12 +26,12 @@
 
 ##  2. WeMeds
 
- Pontos Fortes:
+ **Pontos Fortes**:
 - Todas as funcionalidades funcionam offline.
 - Abrangente: inclui receitas, prescrições, guias de atividade, verificação de vacinas e flashcards educativos.
 - Funcionalidades com inteligência artificial para recomendações de saúde.
 
- Pontos Fracos:
+ **Pontos Fracos**:
 - Interface desatualizada, com design menos moderno.
 - Recursos avançados disponíveis apenas na versão paga.
 
@@ -39,12 +39,12 @@
 
 ##  3. MyTherapy
 
- Pontos Fortes:
+ **Pontos Fortes**:
 - Interface moderna, com componentes acessíveis a usuários idosos.
 - Funcionalidades completas: cadastro de medicamentos, médicos, sintomas, humor e atividades físicas.
 - Sistema de notificações eficaz e gráfico de progresso de tratamento.
 
-  Pontos Fracos:
+ **Pontos Fracos**:
 - Não possui modo escuro ou opção de alterar o tema visual.
 - Algumas funcionalidades exigem login com cadastro.
 
@@ -52,12 +52,12 @@
 
 ##  4. Tomar Remédio
 
- Pontos Fortes:
+**Pontos Fortes**:
 - Interface simples e funcional, ideal para usuários brasileiros.
 - Cadastro de medicamentos fácil de usar.
 - Dashboard com relatório de medicamentos tomados.
 
- Pontos Fracos:
+ **Pontos Fracos**:
 - Algumas funcionalidades ainda estão em desenvolvimento.
 - Falta de feedback visual para indicar em qual tela o usuário está(Hover).
 - Ausência de recursos avançados como exportação de relatórios ou acompanhamento de sintomas.
@@ -72,20 +72,34 @@ Por outro lado, o app **Tomar Remédio** se sobressai pela simplicidade e objeti
 
  ##  Proposta de Arquitetura do Software
 
-Com base nas necessidades identificadas — como facilidade de uso, notificações de medicamentos, acessibilidade para idosos, funcionamento offline e possibilidade de expansão — propomos a seguinte arquitetura para o aplicativo de gerenciamento de medicamentos, e o app serve tanto para IOS quanto para Android:
+Com base nas necessidades identificadas como facilidade de uso, notificações de medicamentos, acessibilidade para idosos, funcionamento offline(obrigatório) e possibilidade de expansão, propomos a seguinte arquitetura para o aplicativo de gerenciamento de medicamentos, e o app serve tanto para IOS quanto para Android:
 
-###  Arquitetura Utilizada:  **
+###  Arquitetura Utilizada:  
 
-A arquitetura será baseada em **camadas independentes**, separando claramente as responsabilidades entre regras de negócio, interface, dados e serviços externos. Isso melhora a **manutenibilidade**, **testabilidade** e **escalabilidade** do projeto.
+A arquitetura será baseada em **camadas independentes**(significa que cada parte do sistema (ou "camada") é responsável apenas por uma função específica e não depende diretamente da implementação das outras camadas,ou seja, elas se comunicam entre si por meio de interfaces, e não de forma acoplada), separando claramente as responsabilidades entre regras de negócio, interface, dados e serviços externos. Isso melhora a **manutenibilidade**, **testabilidade** e **escalabilidade** do projeto.
 
- ## Tecnologia Ultilizadas :
- -Flutter  
- -SqlLite(Para o banco de dados)
+ ## Tecnologia Ultilizadas:
+ - Flutter → Ele permite criar interfaces de usuário atraentes e funcionais para dispositivos móveis (iOS e Android)  
+ - SqlLite → É um sistema de gerenciamento de banco de dados relacional (SGBDR).  
 
- ### Icon Software
+ ## Nome Do Aplicativo
+ - PharmSync
+   
+ ## Explicação Brévia Sobre o Nome:
+**Pharm** → abreviação de pharmacy ou pharmaceutical, que remete a:  
+ - Medicamentos  
+ - Farmácias  
+ - Tratamentos médicos  
+   
+**Sync** → abreviação de synchronization, que significa:  
+- Sincronizar   
+- Conectado em tempo real  
+ 
+
+ ### Icon Software  
  ![Arquitetura do App](image/icon.png)
 
- ### Logo Aplicativo
+ ### Logo Aplicativo  
  ![Arquitetura do App](image/logo.png)
 
  - **Cores padrão:**  
