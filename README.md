@@ -1,4 +1,4 @@
-# Projeto Mobile Gerenciamento De Medicamento
+# Projeto Mobile  Controle Pessoas de Receitas/Ingestão de Medicamentos
 
 ##  Aplicativos Avaliados
 
