@@ -110,7 +110,7 @@ A arquitetura será baseada em **camadas independentes**(significa que cada part
   O aplicativo utilizará uma paleta composta por **branco**, **azul** e **vermelho**, buscando uma combinação visualmente agradável, com contraste adequado e boa legibilidade, especialmente para usuários com maior sensibilidade visual (como idosos).
 
 -  **Fonte utilizada:**  
-  A tipografia escolhida será a **Arial**, uma fonte clássica e amplamente reconhecida por sua **leitura fácil**, simplicidade e compatibilidade com múltiplos dispositivos e sistemas operacionais.
+  A tipografia escolhida será a **Roboto**, uma fonte clássica e amplamente reconhecida por sua **leitura fácil**, simplicidade e compatibilidade com múltiplos dispositivos e sistemas operacionais.
 
 Essas escolhas visam proporcionar uma **experiência limpa, acessível e coerente**, em sintonia com os melhores padrões de design encontrados nos aplicativos atuais de saúde e bem-estar.
 
