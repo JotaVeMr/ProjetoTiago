@@ -130,7 +130,7 @@ Para garantir a organização, a legibilidade e a manutenção do código-fonte 
 ## 1. Padrões de Nomenclatura
 
 ### Variáveis e funções/métodos
-- Utilizar o padrão **camelCase**
+- Utilizar o padrão **PascalCase**
 - Exemplo: `nomeUsuario`, `verificarHorario`, `calcularEstoque`
 
 ### Classes e componentes
