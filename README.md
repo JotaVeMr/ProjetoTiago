@@ -116,7 +116,10 @@ Essas escolhas visam proporcionar uma **experiência limpa, acessível e coerent
 
 # Interface  
 ## Menu  
- ![Arquitetura do App](image/Cadastro.png)
+ ![Arquitetura do App](image/Cadastro.png)  
+
+ ## Tela Inicial  
+ ![Arquitetura do App](image/Inicial.png)
 
  # Proposta de Padrões de Interface, Nomenclatura, Componentes, Variáveis e Boas Práticas
 
