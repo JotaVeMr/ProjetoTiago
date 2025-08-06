@@ -154,11 +154,7 @@ Para garantir a organização, a legibilidade e a manutenção do código-fonte 
 - **Evitar código duplicado**: preferir funções reutilizáveis.
 - **Tratar erros e exceções** com clareza e responsabilidade.  
 
----
 
-## Conclusão
-
-A adoção desses padrões tem como objetivo tornar o projeto mais **coeso, sustentável e fácil de entender** por outros desenvolvedores, garantindo um desenvolvimento mais eficiente e organizado desde o início.
 
 
  
