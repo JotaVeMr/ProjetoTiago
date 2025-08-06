@@ -107,7 +107,7 @@ A arquitetura será baseada em **camadas independentes**(significa que cada part
  ![Arquitetura do App](image/logo.png)
 
  - **Cores padrão:**  
-  O aplicativo utilizará uma paleta composta por **branco**, **azul** e **vermelho**, buscando uma combinação visualmente agradável, com contraste adequado e boa legibilidade, especialmente para usuários com maior sensibilidade visual (como idosos).
+  O aplicativo utilizará uma paleta composta por **branco**, **azul** e **vermelho** e **preto**, buscando uma combinação visualmente agradável, com contraste adequado e boa legibilidade, especialmente para usuários com maior sensibilidade visual (como idosos).
 
 -  **Fonte utilizada:**  
   A tipografia escolhida será a **Roboto**, uma fonte clássica e amplamente reconhecida por sua **leitura fácil**, simplicidade e compatibilidade com múltiplos dispositivos e sistemas operacionais.
