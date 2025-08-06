@@ -29,7 +29,7 @@ O Medisafe é um aplicativo móvel projetado para ajudar pacientes a gerenciar s
 O WeMEDS é um aplicativo focado em medicina, desenvolvido para auxiliar estudantes e profissionais da área. Ele oferece recursos como resumos de diversas especialidades, auxílio em diagnósticos com inteligência artificial, e ferramentas para provas e plantões, além de protocolos e calculadoras. 
 
  **Pontos Fortes**:
-- Todas as funcionalidades funcionam offline.
+- Algumas das  funcionalidades funcionam offline.
 - Abrangente: inclui receitas, prescrições, guias de atividade, verificação de vacinas e flashcards educativos.
 - Funcionalidades com inteligência artificial para recomendações de saúde.
 
