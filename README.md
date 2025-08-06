@@ -104,7 +104,7 @@ A arquitetura será baseada em **camadas independentes**(significa que cada part
  ![Arquitetura do App](image/icon.png)
 
  ## Logo Aplicativo  
- ![Arquitetura do App](image/logo.png)
+ ![Arquitetura do App](image/logoOri.png)
 
  ## Cores padrão:   
   O aplicativo utilizará uma paleta composta por **branco**, **azul** e **vermelho** e **preto**, buscando uma combinação visualmente agradável, com contraste adequado e boa legibilidade, especialmente para usuários com maior sensibilidade visual (como idosos).
