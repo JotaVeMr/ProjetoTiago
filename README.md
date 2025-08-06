@@ -89,7 +89,7 @@ A arquitetura será baseada em **camadas independentes**(significa que cada part
  ## Nome Do Aplicativo
  - PharmSync
    
- ## Explicação Brévia Sobre o Nome:
+ ## Explicação Bréve Sobre o Nome:
 **Pharm** → abreviação de pharmacy ou pharmaceutical, que remete a:  
  - Medicamentos  
  - Farmácias  
@@ -100,21 +100,65 @@ A arquitetura será baseada em **camadas independentes**(significa que cada part
 - Conectado em tempo real  
  
 
- ### Icon Software  
+ ## Icon Software  
  ![Arquitetura do App](image/icon.png)
 
- ### Logo Aplicativo  
+ ## Logo Aplicativo  
  ![Arquitetura do App](image/logo.png)
 
- - **Cores padrão:**  
+ ## Cores padrão:   
   O aplicativo utilizará uma paleta composta por **branco**, **azul** e **vermelho** e **preto**, buscando uma combinação visualmente agradável, com contraste adequado e boa legibilidade, especialmente para usuários com maior sensibilidade visual (como idosos).
 
--  **Fonte utilizada:**  
+ ## Fonte utilizada:  
   A tipografia escolhida será a **Roboto**, uma fonte clássica e amplamente reconhecida por sua **leitura fácil**, simplicidade e compatibilidade com múltiplos dispositivos e sistemas operacionais.
 
 Essas escolhas visam proporcionar uma **experiência limpa, acessível e coerente**, em sintonia com os melhores padrões de design encontrados nos aplicativos atuais de saúde e bem-estar.
 
-## Interface  
+# Interface  
+## Menu  
  ![Arquitetura do App](image/Cadastro.png)
+
+ # Proposta de Padrões de Interface, Nomenclatura, Componentes, Variáveis e Boas Práticas
+
+Para garantir a organização, a legibilidade e a manutenção do código-fonte do aplicativo de controle pessoal de receitas e ingestão de medicamentos, serão adotados os seguintes **padrões e boas práticas** durante o desenvolvimento:
+
+---
+
+## 1. Padrões de Nomenclatura
+
+### Variáveis e funções/métodos
+- Utilizar o padrão **camelCase**
+- Exemplo: `nomeUsuario`, `verificarHorario`, `calcularEstoque`
+
+### Classes e componentes
+- Utilizar o padrão **PascalCase**
+- Exemplo: `ControleMedicamentos`, `TelaPrincipal`, `NotificacaoService`
+
+
+---
+
+## 2. Componentes de Interface 
+
+- Os componentes da interface seguirão uma **hierarquia clara**, com nomes coerentes com sua função.
+- Exemplos:
+  - `btnAdcionar` 
+  - `txtNomeMedicamento` 
+  - `lblHorario` 
+  - `cbxDiasDaSemana` 
+
+---
+
+## 3. Boas Práticas de Programação
+
+- **Código limpo e legível**: utilizar indentação consistente e nomes descritivos.
+- **Evitar código duplicado**: preferir funções reutilizáveis.
+- **Tratar erros e exceções** com clareza e responsabilidade.  
+
+---
+
+## Conclusão
+
+A adoção desses padrões tem como objetivo tornar o projeto mais **coeso, sustentável e fácil de entender** por outros desenvolvedores, garantindo um desenvolvimento mais eficiente e organizado desde o início.
+
 
  
