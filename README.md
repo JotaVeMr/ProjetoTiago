@@ -114,4 +114,7 @@ A arquitetura será baseada em **camadas independentes**(significa que cada part
 
 Essas escolhas visam proporcionar uma **experiência limpa, acessível e coerente**, em sintonia com os melhores padrões de design encontrados nos aplicativos atuais de saúde e bem-estar.
 
+## Interface  
+ ![Arquitetura do App](image/Cadastro.png)
+
  
