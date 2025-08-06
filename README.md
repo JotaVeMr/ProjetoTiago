@@ -131,7 +131,7 @@ Para garantir a organização, a legibilidade e a manutenção do código-fonte 
 
 ### Variáveis e funções/métodos
 - Utilizar o padrão **PascalCase**
-- Exemplo: `nomeUsuario`, `verificarHorario`, `calcularEstoque`
+- Exemplo: `NomeUsuario`, `VerificarHorario`, `CalcularEstoque`
 
 ### Classes e componentes
 - Utilizar o padrão **PascalCase**
