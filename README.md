@@ -10,6 +10,7 @@
 ---
 
 ##  1. Medisafe
+O Medisafe é um aplicativo móvel projetado para ajudar pacientes a gerenciar seus medicamentos, oferecendo lembretes para tomar remédios na hora certa, rastrear a adesão ao tratamento e compartilhar informações com familiares ou profissionais de saúde. Ele também oferece recursos como o monitoramento de outras medidas de saúde, como pressão arterial, e a possibilidade de compartilhar relatórios com o médico ou plano de saúde. 
 
  **Pontos Fortes**:
 - Interface amigável e intuitiva, com tela inicial em formato de calendário.
@@ -25,6 +26,7 @@
 ---
 
 ##  2. WeMeds
+O WeMEDS é um aplicativo focado em medicina, desenvolvido para auxiliar estudantes e profissionais da área. Ele oferece recursos como resumos de diversas especialidades, auxílio em diagnósticos com inteligência artificial, e ferramentas para provas e plantões, além de protocolos e calculadoras. 
 
  **Pontos Fortes**:
 - Todas as funcionalidades funcionam offline.
@@ -38,6 +40,7 @@
 ---
 
 ##  3. MyTherapy
+O MyTherapy é um aplicativo gratuito que funciona como um lembrete de medicamentos e também oferece recursos adicionais para o acompanhamento da saúde, como diário de saúde e registro de medições. Ele é projetado para ajudar pessoas com rotinas complexas ou condições crônicas a manterem seus tratamentos em dia e a monitorarem seu bem-estar. 
 
  **Pontos Fortes**:
 - Interface moderna, com componentes acessíveis a usuários idosos.
@@ -51,6 +54,7 @@
 ---
 
 ##  4. Tomar Remédio
+O aplicativo Tomar Remédio geralmente serve como um lembrete para ajudar as pessoas a lembrarem de tomar seus medicamentos nos horários corretos. Esses aplicativos oferecem diversas funcionalidades, como agendamento de horários, notificações personalizadas e registro da ingestão dos medicamentos. 
 
 **Pontos Fortes**:
 - Interface simples e funcional, ideal para usuários brasileiros.
@@ -72,7 +76,7 @@ Por outro lado, o app **Tomar Remédio** se sobressai pela simplicidade e objeti
 
  ##  Proposta de Arquitetura do Software
 
-Com base nas necessidades identificadas como facilidade de uso, notificações de medicamentos, acessibilidade para idosos, funcionamento offline(obrigatório) e possibilidade de expansão, propomos a seguinte arquitetura para o aplicativo de gerenciamento de medicamentos, e o app serve tanto para IOS quanto para Android:
+Com base nas necessidades identificadas como facilidade de uso, notificações de medicamentos, acessibilidade para idosos, funcionamento offline(obrigatório),propomos a seguinte arquitetura para o aplicativo de gerenciamento de medicamentos, e o app serve tanto para IOS quanto para Android:
 
 ###  Arquitetura Utilizada:  
 
