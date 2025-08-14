@@ -1,0 +1,58 @@
+Tela inical
+
+Exibir, na tela inicial do aplicativo, os medicamentos a serem ministrados.
+Requisito Funcional – Registro e Controle de Medicamentos
+
+Requisito Funcional – Registro e Controle de Medicamentos
+
+Descrição:
+O sistema deverá exibir ao usuário a agenda diária de medicamentos, com base na data selecionada no calendário, permitindo o registro de horários de ingestão e confirmação de dose tomada.
+
+Fluxo e Elementos da Tela:
+
+
+Calendário de Seleção de Data:
+
+Permitir navegação entre dias da semana.
+
+Destacar a data atual em cor diferenciada (ex.: azul claro).
+
+Exibir o texto “Hoje, DD de Mês” abaixo da data selecionada.
+---------------------------------------------------------------------------------------------
+Lista de Lembretes de Medicamentos:
+
+Agrupar medicamentos por horário programado (ex.: “08:00”).
+-------------------------------------------------------------------------------------------
+Para cada medicamento, exibir:
+
+Ícone representando pílula/comprimido.
+
+Nome do medicamento (ex.: “Tadala”).
+
+Dosagem prevista (ex.: “Tomar 1 Comprimido(s)”).
+
+Status da dose (ex.: “Tomado às 21:03, hoje, 13 de ago.”), com cor verde indicando confirmação.
+--------------------------------------------------------------------------------------------
+Botão de Adição (+):
+
+Localizado no canto inferior direito.
+
+Ao ser acionado, deve permitir cadastrar novo medicamento e horário.
+------------------------------------------------------------------------------------------
+Menu Inferior de Navegação:
+
+Início: Tela atual, mostrando lembretes e histórico de ingestão.
+
+Atualizações: Histórico ou mudanças nos medicamentos.
+
+Medicamentos: Lista completa dos medicamentos cadastrados.
+
+Mais: Opções adicionais de configurações e perfil.
+--------------------------------------------------------------------------------------
+Regras de Negócio:
+
+Ao marcar uma dose como tomada, registrar automaticamente o horário exato de confirmação.
+
+As doses futuras devem permanecer pendentes até que o usuário confirme.
+
+O sistema deve manter registro histórico
