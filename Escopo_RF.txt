@@ -1,4 +1,4 @@
-Tela inical
+
 
 Exibir, na tela inicial do aplicativo, os medicamentos a serem ministrados.
 Requisito Funcional – Registro e Controle de Medicamentos
@@ -25,17 +25,19 @@ Agrupar medicamentos por horário programado (ex.: “08:00”).
 -------------------------------------------------------------------------------------------
 Para cada medicamento, exibir:
 
-Ícone representando pílula/comprimido.
 
 Nome do medicamento (ex.: “Tadala”).
 
-Dosagem prevista (ex.: “Tomar 1 Comprimido(s)”).
+Dosagem prevista (ex.: “Tomar 1 Comprimido(s)”).ou pilula ou xarope etc
 
-Status da dose (ex.: “Tomado às 21:03, hoje, 13 de ago.”), com cor verde indicando confirmação.
+data do remedio
+
+hora do remedio
+
 --------------------------------------------------------------------------------------------
-Botão de Adição (+):
+Botão de Adição (Adicionar medicamneto):
 
-Localizado no canto inferior direito.
+Localizado na parte de baixo da tala.
 
 Ao ser acionado, deve permitir cadastrar novo medicamento e horário.
 ------------------------------------------------------------------------------------------
@@ -43,16 +45,17 @@ Menu Inferior de Navegação:
 
 Início: Tela atual, mostrando lembretes e histórico de ingestão.
 
-Atualizações: Histórico ou mudanças nos medicamentos.
+Tratamento: Histórico ou mudanças nos medicamentos.
 
-Medicamentos: Lista completa dos medicamentos cadastrados.
+Vamos ver: #####.
 
-Mais: Opções adicionais de configurações e perfil.
+Configuraçoes: Opções adicionais de configurações e perfil.
 --------------------------------------------------------------------------------------
 Regras de Negócio:
 
 Ao marcar uma dose como tomada, registrar automaticamente o horário exato de confirmação.
 
 As doses futuras devem permanecer pendentes até que o usuário confirme.
+
 
 O sistema deve manter registro histórico
