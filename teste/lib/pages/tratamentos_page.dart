@@ -1,11 +1,12 @@
- import 'dart:convert';
+// lib/pages/tratamentos_page.dart
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/medicamento.dart';
+import '../services/database_helper.dart';
 import 'add_medicamento_page.dart';
 
-// Página de Tratamentos (editar/excluir/adicionar)
 class TratamentosPage extends StatefulWidget {
   @override
   _TratamentosPageState createState() => _TratamentosPageState();
@@ -20,23 +21,53 @@ class _TratamentosPageState extends State<TratamentosPage> {
     _loadMedicamentos();
   }
 
-  // Carrega os medicamentos salvos
+  // Carrega os medicamentos salvos (SharedPreferences + SQLite)
   Future<void> _loadMedicamentos() async {
     final prefs = await SharedPreferences.getInstance();
     final data = prefs.getStringList('medicamentos') ?? [];
+    List<Medicamento> prefsList = data.map((e) => Medicamento.fromJson(jsonDecode(e))).toList();
+
+    final dbList = await DatabaseHelper.instance.getMedicamentos();
+
+    final Map<String, Medicamento> mapa = {};
+    for (final m in prefsList) {
+      final key = m.id != null ? 'id_${m.id}' : 'pref_${m.nome}_${m.dataHoraAgendamento}';
+      mapa[key] = m;
+    }
+    for (final m in dbList) {
+      final key = m.id != null ? 'id_${m.id}' : 'db_${m.nome}_${m.dataHoraAgendamento}';
+      mapa[key] = m;
+    }
+
     setState(() {
-      medicamentos = data
-          .map((e) => Medicamento.fromJson(jsonDecode(e)))
-          .toList();
+      medicamentos = mapa.values.toList();
       medicamentos.sort((a, b) => a.scheduledDateTime.compareTo(b.scheduledDateTime));
     });
+
+    // sincroniza (garante que DB e prefs fiquem iguais)
+    await _syncToStorage();
+  }
+
+  Future<void> _syncToStorage() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // sync para db
+    for (final med in medicamentos) {
+      if (med.id != null) {
+        await DatabaseHelper.instance.updateMedicamento(med);
+      } else {
+        final newId = await DatabaseHelper.instance.insertMedicamento(med);
+        if (newId != 0) med.id = newId;
+      }
+    }
+
+    // salvar em prefs
+    await prefs.setStringList('medicamentos', medicamentos.map((e) => jsonEncode(e.toJson())).toList());
   }
 
   // Salva os medicamentos (usado após adicionar/editar/excluir)
   Future<void> _saveMedicamentos() async {
-    final prefs = await SharedPreferences.getInstance();
-    prefs.setStringList(
-        'medicamentos', medicamentos.map((e) => jsonEncode(e.toJson())).toList());
+    await _syncToStorage();
   }
 
   // Abre a tela para adicionar/editar medicamento
@@ -55,7 +86,8 @@ class _TratamentosPageState extends State<TratamentosPage> {
   }
 
   // Confirmação e exclusão de medicamento
-  void _deleteMedicamento(int index) {
+  void _deleteMedicamento(int index) async {
+    final med = medicamentos[index];
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -71,12 +103,15 @@ class _TratamentosPageState extends State<TratamentosPage> {
             ),
             TextButton(
               child: const Text("Excluir", style: TextStyle(color: Colors.red)),
-              onPressed: () {
+              onPressed: () async {
+                Navigator.of(context).pop();
+                if (med.id != null) {
+                  await DatabaseHelper.instance.deleteMedicamento(med.id!);
+                }
                 setState(() {
                   medicamentos.removeAt(index);
-                  _saveMedicamentos();
                 });
-                Navigator.of(context).pop();
+                await _saveMedicamentos();
               },
             ),
           ],

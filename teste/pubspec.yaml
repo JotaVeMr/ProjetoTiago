@@ -18,9 +18,11 @@ dependencies:
   cupertino_icons: ^1.0.8
   shared_preferences: ^2.3.3
   flutter_local_notifications: ^17.2.2
+  sqflite: ^2.3.3+1
+  path: ^1.9.0
 
 dev_dependencies:
-  flutter_test:
+  flutter_test: 
     sdk: flutter
   flutter_launcher_icons: ^0.14.4
   flutter_native_splash: ^2.4.1

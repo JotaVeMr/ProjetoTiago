@@ -1,3 +1,4 @@
+// lib/pages/home_page.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -6,9 +7,9 @@ import 'package:table_calendar/table_calendar.dart';
 
 import '../models/medicamento.dart';
 import '../services/notification_service.dart';
+import '../services/database_helper.dart';
 import 'add_medicamento_page.dart';
 
-// Página Inicial
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -18,7 +19,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   List<Medicamento> medicamentos = [];
-  CalendarFormat _calendarFormat = CalendarFormat.month;
+  CalendarFormat _calendarFormat = CalendarFormat.week;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
 
@@ -29,44 +30,86 @@ class _HomePageState extends State<HomePage> {
     _loadMedicamentos();
   }
 
-  // Carrega os medicamentos salvos (usando SharedPreferences)
+  // Carrega medicamentos
   Future<void> _loadMedicamentos() async {
     final prefs = await SharedPreferences.getInstance();
     final data = prefs.getStringList('medicamentos') ?? [];
+    List<Medicamento> prefsList =
+        data.map((e) => Medicamento.fromJson(jsonDecode(e))).toList();
+
+    List<Medicamento> dbList = await DatabaseHelper.instance.getMedicamentos();
+
+    final Map<String, Medicamento> mapa = {};
+    for (final m in prefsList) {
+      final key = m.id != null
+          ? 'id_${m.id}'
+          : 'pref_${m.nome}_${m.dataHoraAgendamento}';
+      mapa[key] = m;
+    }
+    for (final m in dbList) {
+      final key = m.id != null
+          ? 'id_${m.id}'
+          : 'db_${m.nome}_${m.dataHoraAgendamento}';
+      mapa[key] = m;
+    }
+
+    // Atualiza automaticamente status PENDENTE
+    final now = DateTime.now();
+    for (var med in mapa.values) {
+      if (!med.isTaken && !med.isIgnored && med.scheduledDateTime.isBefore(now)) {
+        med.isPendente = true;
+        await DatabaseHelper.instance.updateMedicamento(med);
+      }
+    }
+
     setState(() {
-      medicamentos = data
-          .map((e) => Medicamento.fromJson(jsonDecode(e)))
-          .toList();
-      medicamentos.sort((a, b) => a.scheduledDateTime.compareTo(b.scheduledDateTime));
+      medicamentos = mapa.values.toList();
+      medicamentos.sort(
+          (a, b) => a.scheduledDateTime.compareTo(b.scheduledDateTime));
     });
+
+    await _syncToStorage();
   }
 
-  // Salva os medicamentos (usando SharedPreferences)
-  Future<void> _saveMedicamentos() async {
+  Future<void> _saveMedicamentosLocalOnly() async {
     final prefs = await SharedPreferences.getInstance();
-    prefs.setStringList(
-        'medicamentos', medicamentos.map((e) => jsonEncode(e.toJson())).toList());
+    await prefs.setStringList('medicamentos',
+        medicamentos.map((e) => jsonEncode(e.toJson())).toList());
   }
 
-  // Filtra os medicamentos para o dia selecionado
+  Future<void> _syncToStorage() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    for (final med in medicamentos) {
+      if (med.id != null) {
+        await DatabaseHelper.instance.updateMedicamento(med);
+      } else {
+        final newId = await DatabaseHelper.instance.insertMedicamento(med);
+        if (newId != 0) med.id = newId;
+      }
+    }
+
+    await prefs.setStringList('medicamentos',
+        medicamentos.map((e) => jsonEncode(e.toJson())).toList());
+  }
+
   List<Medicamento> _getMedicamentosForSelectedDay(DateTime day) {
     return medicamentos.where((med) {
       return isSameDay(med.scheduledDateTime, day);
     }).toList();
   }
 
-  // Abre a tela para adicionar medicamento e recarrega a lista
   void _navigateToAddMedicamentoPage() async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const AddMedicamentoPage()),
     );
     if (result == true) {
-      _loadMedicamentos();
+      await _loadMedicamentos();
     }
   }
 
-  // ==== Lógica para o pop-up de ação do medicamento ====
+  // ==== Pop-up de ações do medicamento ====
   void _showMedicamentoActions(Medicamento medicamento, int index) {
     showModalBottomSheet(
       context: context,
@@ -74,7 +117,8 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: Colors.transparent,
       builder: (BuildContext bc) {
         return Container(
-          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
+          constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.7),
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.only(
@@ -98,7 +142,8 @@ class _HomePageState extends State<HomePage> {
                 ),
                 Text(
                   medicamento.nome,
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 24, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
                 Text(
@@ -107,15 +152,19 @@ class _HomePageState extends State<HomePage> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 20),
+
+                // TOMAR AGORA
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       setState(() {
                         medicamento.isTaken = true;
                         medicamento.isIgnored = false;
+                        medicamento.isPendente = false;
                       });
-                      _saveMedicamentos();
+                      await DatabaseHelper.instance.updateMedicamento(medicamento);
+                      await _saveMedicamentosLocalOnly();
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('${medicamento.nome} marcado como tomado!')),
@@ -125,12 +174,16 @@ class _HomePageState extends State<HomePage> {
                       backgroundColor: Colors.green,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
                     ),
-                    child: const Text("Tomar agora", style: TextStyle(fontSize: 18)),
+                    child: const Text("Tomar agora",
+                        style: TextStyle(fontSize: 18)),
                   ),
                 ),
                 const SizedBox(height: 10),
+
+                // REAGENDAR
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -159,53 +212,90 @@ class _HomePageState extends State<HomePage> {
                       );
 
                       setState(() {
-                        medicamento.dataHoraAgendamento = newScheduledDateTime.toIso8601String();
+                        medicamento.dataHoraAgendamento =
+                            newScheduledDateTime.toIso8601String();
                         medicamento.isTaken = false;
                         medicamento.isIgnored = false;
+                        medicamento.isPendente = false;
                       });
-                      _saveMedicamentos();
+
+                      await DatabaseHelper.instance.updateMedicamento(medicamento);
+                      await _saveMedicamentosLocalOnly();
+
                       NotificationService().scheduleNotification(
-                        medicamento.id ?? newScheduledDateTime.millisecondsSinceEpoch % 100000,
+                        medicamento.id ??
+                            newScheduledDateTime.millisecondsSinceEpoch % 100000,
                         "Hora do medicamento",
                         "É hora de tomar ${medicamento.nome} - ${medicamento.dose}",
                         newScheduledDateTime,
                       );
-                      _loadMedicamentos();
+
+                      await _loadMedicamentos();
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('${medicamento.nome} reagendado para ${new TimeOfDay(hour: newScheduledDateTime.hour, minute: newScheduledDateTime.minute).format(context)}')),
+                        SnackBar(
+                            content: Text(
+                                '${medicamento.nome} reagendado para ${TimeOfDay(hour: newScheduledDateTime.hour, minute: newScheduledDateTime.minute).format(context)}')),
                       );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
                     ),
-                    child: const Text("Reagendar", style: TextStyle(fontSize: 18)),
+                    child:
+                        const Text("Reagendar", style: TextStyle(fontSize: 18)),
                   ),
                 ),
                 const SizedBox(height: 10),
+
+                // ESQUECIDO
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () async {
+                      setState(() {
+                        medicamento.isTaken = false;
+                        medicamento.isIgnored = true; // agora é "esquecido"
+                        medicamento.isPendente = false;
+                      });
+                      await DatabaseHelper.instance.updateMedicamento(medicamento);
+                      await _saveMedicamentosLocalOnly();
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('${medicamento.nome} marcado como esquecido.')),
+                      );
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.orange,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      side: const BorderSide(color: Colors.orange),
+                    ),
+                    child:
+                        const Text("Esquecido", style: TextStyle(fontSize: 18)),
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // CANCELAR
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
                     onPressed: () {
-                      setState(() {
-                        medicamento.isTaken = false;
-                        medicamento.isIgnored = true;
-                      });
-                      _saveMedicamentos();
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('${medicamento.nome} ignorado.')),
-                      );
                     },
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.blue,
+                      foregroundColor: Colors.red,
                       padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      side: const BorderSide(color: Colors.blue),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      side: const BorderSide(color: Colors.red),
                     ),
-                    child: const Text("Ignorar", style: TextStyle(fontSize: 18)),
+                    child:
+                        const Text("Cancelar", style: TextStyle(fontSize: 18)),
                   ),
                 ),
               ],
@@ -218,9 +308,8 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final medicamentosForSelectedDay = _selectedDay != null
-        ? _getMedicamentosForSelectedDay(_selectedDay!)
-        : [];
+    final medicamentosForSelectedDay =
+        _selectedDay != null ? _getMedicamentosForSelectedDay(_selectedDay!) : [];
 
     return Scaffold(
       appBar: AppBar(
@@ -254,6 +343,8 @@ class _HomePageState extends State<HomePage> {
             lastDay: DateTime.utc(2030, 12, 31),
             focusedDay: _focusedDay,
             calendarFormat: _calendarFormat,
+            availableCalendarFormats: const {CalendarFormat.week: 'Semana'},
+            availableGestures: AvailableGestures.all,
             selectedDayPredicate: (day) {
               return isSameDay(_selectedDay, day);
             },
@@ -264,9 +355,9 @@ class _HomePageState extends State<HomePage> {
               });
             },
             onFormatChanged: (format) {
-              if (_calendarFormat != format) {
+              if (_calendarFormat != CalendarFormat.week) {
                 setState(() {
-                  _calendarFormat = format;
+                  _calendarFormat = CalendarFormat.week;
                 });
               }
             },
@@ -290,6 +381,24 @@ class _HomePageState extends State<HomePage> {
             eventLoader: (day) {
               return _getMedicamentosForSelectedDay(day);
             },
+            calendarBuilders: CalendarBuilders(
+              markerBuilder: (context, date, events) {
+                if (events.isNotEmpty) {
+                  return Positioned(
+                    bottom: 1,
+                    child: Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        color: Colors.black,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  );
+                }
+                return null;
+              },
+            ),
           ),
           const SizedBox(height: 16),
           Expanded(
@@ -302,14 +411,17 @@ class _HomePageState extends State<HomePage> {
                     itemBuilder: (context, index) {
                       final med = medicamentosForSelectedDay[index];
                       return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
                         elevation: 2,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
                         child: ListTile(
                           contentPadding: const EdgeInsets.all(16),
                           title: Text(
                             med.nome,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 18),
                           ),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -318,20 +430,42 @@ class _HomePageState extends State<HomePage> {
                                 "${med.tipo} - ${med.dose} - ${med.scheduledTimeOfDay.format(context)}",
                                 style: const TextStyle(color: Colors.grey),
                               ),
+                              // Novo: período do tratamento
+                              Text(
+                                "Tratamento: ${DateFormat('dd/MM/yyyy').format(DateTime.parse(med.dataInicio))} até ${DateFormat('dd/MM/yyyy').format(DateTime.parse(med.dataFim))}",
+                                style: const TextStyle(
+                                    color: Colors.black54,
+                                    fontStyle: FontStyle.italic,
+                                    fontSize: 13),
+                              ),
                               if (med.isTaken)
                                 const Padding(
                                   padding: EdgeInsets.only(top: 4.0),
                                   child: Text(
                                     "Tomado",
-                                    style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+                                    style: TextStyle(
+                                        color: Colors.green,
+                                        fontWeight: FontWeight.bold),
                                   ),
                                 ),
                               if (med.isIgnored)
                                 const Padding(
                                   padding: EdgeInsets.only(top: 4.0),
                                   child: Text(
-                                    "Ignorado",
-                                    style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
+                                    "Esquecido",
+                                    style: TextStyle(
+                                        color: Colors.orange,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              if (med.isPendente)
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 4.0),
+                                  child: Text(
+                                    "Pendente",
+                                    style: TextStyle(
+                                        color: Colors.red,
+                                        fontWeight: FontWeight.bold),
                                   ),
                                 ),
                             ],
@@ -346,10 +480,12 @@ class _HomePageState extends State<HomePage> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _navigateToAddMedicamentoPage,
-        label: const Text("Adicionar Medicamento", style: TextStyle(color: Colors.white)),
+        label: const Text("Adicionar Medicamento",
+            style: TextStyle(color: Colors.white)),
         icon: const Icon(Icons.add, color: Colors.white),
         backgroundColor: Colors.blue,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30.0)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30.0)),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
