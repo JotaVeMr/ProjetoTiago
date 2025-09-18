@@ -41,22 +41,22 @@ class _HomePageState extends State<HomePage> {
 
     final Map<String, Medicamento> mapa = {};
     for (final m in prefsList) {
-      final key = m.id != null
-          ? 'id_${m.id}'
-          : 'pref_${m.nome}_${m.dataHoraAgendamento}';
+      final key =
+          m.id != null ? 'id_${m.id}' : 'pref_${m.nome}_${m.dataHoraAgendamento}';
       mapa[key] = m;
     }
     for (final m in dbList) {
-      final key = m.id != null
-          ? 'id_${m.id}'
-          : 'db_${m.nome}_${m.dataHoraAgendamento}';
+      final key =
+          m.id != null ? 'id_${m.id}' : 'db_${m.nome}_${m.dataHoraAgendamento}';
       mapa[key] = m;
     }
 
     // Atualiza automaticamente status PENDENTE
     final now = DateTime.now();
     for (var med in mapa.values) {
-      if (!med.isTaken && !med.isIgnored && med.scheduledDateTime.isBefore(now)) {
+      if (!med.isTaken &&
+          !med.isIgnored &&
+          med.scheduledDateTime.isBefore(now)) {
         med.isPendente = true;
         await DatabaseHelper.instance.updateMedicamento(med);
       }
@@ -64,8 +64,8 @@ class _HomePageState extends State<HomePage> {
 
     setState(() {
       medicamentos = mapa.values.toList();
-      medicamentos.sort(
-          (a, b) => a.scheduledDateTime.compareTo(b.scheduledDateTime));
+      medicamentos
+          .sort((a, b) => a.scheduledDateTime.compareTo(b.scheduledDateTime));
     });
 
     await _syncToStorage();
@@ -93,9 +93,24 @@ class _HomePageState extends State<HomePage> {
         medicamentos.map((e) => jsonEncode(e.toJson())).toList());
   }
 
+  // Lista de medicamentos que aparecem NA LISTA (considera o período)
   List<Medicamento> _getMedicamentosForSelectedDay(DateTime day) {
     return medicamentos.where((med) {
-      return isSameDay(med.scheduledDateTime, day);
+      final inicio = DateTime.parse(med.dataInicio);
+      final fim = DateTime.parse(med.dataFim);
+
+      final diaSelecionado = DateTime(day.year, day.month, day.day);
+
+      return (diaSelecionado.isAfter(inicio.subtract(const Duration(days: 1))) &&
+          diaSelecionado.isBefore(fim.add(const Duration(days: 1))));
+    }).toList();
+  }
+
+  // Eventos do calendário → bolinha só na data INICIAL
+  List<dynamic> _getEventosDoCalendario(DateTime day) {
+    return medicamentos.where((med) {
+      final inicio = DateTime.parse(med.dataInicio);
+      return isSameDay(day, inicio);
     }).toList();
   }
 
@@ -117,8 +132,8 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: Colors.transparent,
       builder: (BuildContext bc) {
         return Container(
-          constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.7),
+          constraints:
+              BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.only(
@@ -167,7 +182,9 @@ class _HomePageState extends State<HomePage> {
                       await _saveMedicamentosLocalOnly();
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('${medicamento.nome} marcado como tomado!')),
+                        SnackBar(
+                            content: Text(
+                                '${medicamento.nome} marcado como tomado!')),
                       );
                     },
                     style: ElevatedButton.styleFrom(
@@ -177,8 +194,8 @@ class _HomePageState extends State<HomePage> {
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10)),
                     ),
-                    child: const Text("Tomar agora",
-                        style: TextStyle(fontSize: 18)),
+                    child:
+                        const Text("Tomar agora", style: TextStyle(fontSize: 18)),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -264,7 +281,9 @@ class _HomePageState extends State<HomePage> {
                       await _saveMedicamentosLocalOnly();
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('${medicamento.nome} marcado como esquecido.')),
+                        SnackBar(
+                            content: Text(
+                                '${medicamento.nome} marcado como esquecido.')),
                       );
                     },
                     style: OutlinedButton.styleFrom(
@@ -339,6 +358,7 @@ class _HomePageState extends State<HomePage> {
       body: Column(
         children: [
           TableCalendar(
+            locale: 'pt_BR',
             firstDay: DateTime.utc(2020, 1, 1),
             lastDay: DateTime.utc(2030, 12, 31),
             focusedDay: _focusedDay,
@@ -379,7 +399,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             eventLoader: (day) {
-              return _getMedicamentosForSelectedDay(day);
+              return _getEventosDoCalendario(day); // só dataInicio
             },
             calendarBuilders: CalendarBuilders(
               markerBuilder: (context, date, events) {
@@ -430,12 +450,11 @@ class _HomePageState extends State<HomePage> {
                                 "${med.tipo} - ${med.dose} - ${med.scheduledTimeOfDay.format(context)}",
                                 style: const TextStyle(color: Colors.grey),
                               ),
-                              // Novo: período do tratamento
                               Text(
                                 "Tratamento: ${DateFormat('dd/MM/yyyy').format(DateTime.parse(med.dataInicio))} até ${DateFormat('dd/MM/yyyy').format(DateTime.parse(med.dataFim))}",
                                 style: const TextStyle(
                                     color: Colors.black54,
-                                    fontStyle: FontStyle.italic,
+                                    fontStyle: FontStyle.normal,
                                     fontSize: 13),
                               ),
                               if (med.isTaken)
@@ -484,8 +503,8 @@ class _HomePageState extends State<HomePage> {
             style: TextStyle(color: Colors.white)),
         icon: const Icon(Icons.add, color: Colors.white),
         backgroundColor: Colors.blue,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30.0)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(30.0)),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );

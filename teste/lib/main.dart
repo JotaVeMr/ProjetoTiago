@@ -25,7 +25,6 @@ void main() async {
   FlutterNativeSplash.remove();
 }
 
-
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
@@ -45,6 +44,8 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+
+      // 👇 Localização configurada
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -53,6 +54,8 @@ class _MyAppState extends State<MyApp> {
       supportedLocales: const [
         Locale('pt', 'BR'),
       ],
+      locale: const Locale('pt', 'BR'), // 👈 força português Brasil
+
       home: Scaffold(
         body: _pages[_selectedIndex],
         bottomNavigationBar: BottomNavigationBar(
@@ -67,7 +70,9 @@ class _MyAppState extends State<MyApp> {
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.home), label: "Início"),
             BottomNavigationBarItem(
-                icon: Icon(Icons.medication), label: "Tratamentos"),
+              icon: Icon(Icons.medication),
+              label: "Medicamentos",
+            ),
           ],
         ),
       ),
