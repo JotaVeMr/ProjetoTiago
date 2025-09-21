@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/medicamento.dart';
+import '../models/usuario.dart';
 import '../services/database_helper.dart';
+import '../services/app_event_bus.dart';
 import 'add_medicamento_page.dart';
 
 class TratamentosPage extends StatefulWidget {
@@ -13,21 +15,40 @@ class TratamentosPage extends StatefulWidget {
 }
 
 class _TratamentosPageState extends State<TratamentosPage> {
+  Usuario? usuarioSelecionado;
   List<Medicamento> medicamentos = [];
 
   @override
   void initState() {
     super.initState();
-    _loadMedicamentos();
+    _loadUsuarioSelecionado().then((_) => _loadMedicamentos());
   }
 
-  // Carrega os medicamentos salvos (SharedPreferences + SQLite)
-  Future<void> _loadMedicamentos() async {
+  Future<void> _loadUsuarioSelecionado() async {
     final prefs = await SharedPreferences.getInstance();
-    final data = prefs.getStringList('medicamentos') ?? [];
-    List<Medicamento> prefsList = data.map((e) => Medicamento.fromJson(jsonDecode(e))).toList();
+    final usuarioJson = prefs.getString('usuarioSelecionado');
+    if (usuarioJson != null) {
+      usuarioSelecionado = Usuario.fromMap(jsonDecode(usuarioJson));
+    } else {
+      usuarioSelecionado = null;
+    }
+    setState(() {});
+  }
 
-    final dbList = await DatabaseHelper.instance.getMedicamentos();
+  // Carrega os medicamentos salvos (SharedPreferences + SQLite) por usuário
+  Future<void> _loadMedicamentos() async {
+    if (usuarioSelecionado == null || usuarioSelecionado!.id == null) {
+      setState(() => medicamentos = []);
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final data = prefs.getStringList('medicamentos_${usuarioSelecionado!.id}') ?? [];
+    List<Medicamento> prefsList =
+        data.map((e) => Medicamento.fromJson(jsonDecode(e))).toList();
+
+    final dbList = await DatabaseHelper.instance
+        .getMedicamentos(usuarioId: usuarioSelecionado!.id!);
 
     final Map<String, Medicamento> mapa = {};
     for (final m in prefsList) {
@@ -44,15 +65,17 @@ class _TratamentosPageState extends State<TratamentosPage> {
       medicamentos.sort((a, b) => a.scheduledDateTime.compareTo(b.scheduledDateTime));
     });
 
-    // sincroniza (garante que DB e prefs fiquem iguais)
     await _syncToStorage();
   }
 
   Future<void> _syncToStorage() async {
+    if (usuarioSelecionado == null || usuarioSelecionado!.id == null) return;
+
     final prefs = await SharedPreferences.getInstance();
 
-    // sync para db
+    // sync para db (garante usuarioId)
     for (final med in medicamentos) {
+      med.usuarioId = usuarioSelecionado!.id;
       if (med.id != null) {
         await DatabaseHelper.instance.updateMedicamento(med);
       } else {
@@ -61,13 +84,11 @@ class _TratamentosPageState extends State<TratamentosPage> {
       }
     }
 
-    // salvar em prefs
-    await prefs.setStringList('medicamentos', medicamentos.map((e) => jsonEncode(e.toJson())).toList());
-  }
-
-  // Salva os medicamentos (usado após adicionar/editar/excluir)
-  Future<void> _saveMedicamentos() async {
-    await _syncToStorage();
+    // salvar em prefs por usuário
+    await prefs.setStringList(
+      'medicamentos_${usuarioSelecionado!.id}',
+      medicamentos.map((e) => jsonEncode(e.toJson())).toList(),
+    );
   }
 
   // Abre a tela para adicionar/editar medicamento
@@ -75,13 +96,15 @@ class _TratamentosPageState extends State<TratamentosPage> {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-          builder: (context) => AddMedicamentoPage(
-                medicamento: medicamento,
-                index: index,
-              )),
+        builder: (context) => AddMedicamentoPage(
+          medicamento: medicamento,
+          index: index,
+        ),
+      ),
     );
     if (result == true) {
-      _loadMedicamentos();
+      await _loadMedicamentos();
+      AppEventBus.I.bumpMedChange(); // avisa Home
     }
   }
 
@@ -105,13 +128,15 @@ class _TratamentosPageState extends State<TratamentosPage> {
               child: const Text("Excluir", style: TextStyle(color: Colors.red)),
               onPressed: () async {
                 Navigator.of(context).pop();
+
                 if (med.id != null) {
                   await DatabaseHelper.instance.deleteMedicamento(med.id!);
                 }
                 setState(() {
                   medicamentos.removeAt(index);
                 });
-                await _saveMedicamentos();
+                await _syncToStorage();
+                AppEventBus.I.bumpMedChange(); // avisa Home para recarregar
               },
             ),
           ],
@@ -122,9 +147,11 @@ class _TratamentosPageState extends State<TratamentosPage> {
 
   @override
   Widget build(BuildContext context) {
+    final nome = usuarioSelecionado?.nome ?? 'Perfil';
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Meus Tratamentos"),
+        title: Text("Tratamentos — $nome"),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
@@ -144,7 +171,9 @@ class _TratamentosPageState extends State<TratamentosPage> {
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
               ),
               subtitle: Text(
-                "${med.tipo} - ${med.dose} - ${med.scheduledDateTime.toLocal().toString().split(' ')[0]} ${med.scheduledTimeOfDay.format(context)}",
+                "${med.tipo} - ${med.dose} - "
+                "${med.scheduledDateTime.toLocal().toString().split(' ')[0]} "
+                "${med.scheduledTimeOfDay.format(context)}",
                 style: const TextStyle(color: Colors.grey),
               ),
               trailing: Row(
@@ -152,7 +181,10 @@ class _TratamentosPageState extends State<TratamentosPage> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.edit, color: Colors.blue),
-                    onPressed: () => _navigateToAddMedicamentoPage(medicamento: med, index: index),
+                    onPressed: () => _navigateToAddMedicamentoPage(
+                      medicamento: med,
+                      index: index,
+                    ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.delete, color: Colors.red),

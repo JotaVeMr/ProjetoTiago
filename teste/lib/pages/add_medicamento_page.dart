@@ -5,10 +5,10 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/medicamento.dart';
+import '../models/usuario.dart';
 import '../services/notification_service.dart';
-import '../services/database_helper.dart'; // 🔹 para usar SQLite
+import '../services/database_helper.dart';
 
-// Página para adicionar ou editar medicamento
 class AddMedicamentoPage extends StatefulWidget {
   final Medicamento? medicamento;
   final int? index;
@@ -25,26 +25,27 @@ class _AddMedicamentoPageState extends State<AddMedicamentoPage> {
   String tipoSelecionado = "Comprimido";
   TimeOfDay horarioSelecionado = TimeOfDay.now();
 
-  // NOVOS: data de início e fim do tratamento
   DateTime dataInicioSelecionada = DateTime.now();
   DateTime dataFimSelecionada = DateTime.now().add(const Duration(days: 7));
+
+  Usuario? _usuarioSelecionado;
 
   @override
   void initState() {
     super.initState();
+    _carregarUsuarioSelecionado();
+
     if (widget.medicamento != null) {
       nomeController.text = widget.medicamento!.nome;
       tipoSelecionado = widget.medicamento!.tipo;
       doseController.text = widget.medicamento!.dose;
 
-      // restaurar horário
       try {
         horarioSelecionado = widget.medicamento!.scheduledTimeOfDay;
       } catch (_) {
         horarioSelecionado = TimeOfDay.now();
       }
 
-      // restaurar dataInicio/dataFim
       try {
         if (widget.medicamento!.dataInicio.isNotEmpty) {
           dataInicioSelecionada = DateTime.parse(widget.medicamento!.dataInicio);
@@ -62,28 +63,36 @@ class _AddMedicamentoPageState extends State<AddMedicamentoPage> {
     }
   }
 
-  // Salva o medicamento no banco e no SharedPreferences
+  Future<void> _carregarUsuarioSelecionado() async {
+    final prefs = await SharedPreferences.getInstance();
+    final usuarioJson = prefs.getString('usuarioSelecionado');
+    if (usuarioJson != null) {
+      setState(() {
+        _usuarioSelecionado = Usuario.fromJson(jsonDecode(usuarioJson));
+      });
+    }
+  }
+
   Future<void> _saveMedicamento() async {
+    if (_usuarioSelecionado == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecione um perfil antes de adicionar.')),
+      );
+      return;
+    }
     if (nomeController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor, preencha o nome do medicamento.'),
-          backgroundColor: Colors.red,
-        ),
+        const SnackBar(content: Text('Por favor, preencha o nome do medicamento.'), backgroundColor: Colors.red),
       );
       return;
     }
     if (doseController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor, preencha a dose do medicamento.'),
-          backgroundColor: Colors.red,
-        ),
+        const SnackBar(content: Text('Por favor, preencha a dose do medicamento.'), backgroundColor: Colors.red),
       );
       return;
     }
 
-    // Monta a primeira data de agendamento (início + horário)
     final fullDateTime = DateTime(
       dataInicioSelecionada.year,
       dataInicioSelecionada.month,
@@ -103,9 +112,10 @@ class _AddMedicamentoPageState extends State<AddMedicamentoPage> {
       isTaken: widget.medicamento?.isTaken ?? false,
       isIgnored: widget.medicamento?.isIgnored ?? false,
       isPendente: widget.medicamento?.isPendente ?? false,
+      usuarioId: _usuarioSelecionado!.id, // VÍNCULO AQUI
     );
 
-    // 🔹 Salvar no SQLite
+    // SQLite
     final db = await DatabaseHelper.instance.database;
     if (widget.medicamento != null && widget.medicamento!.id != null) {
       await db.update(
@@ -118,13 +128,12 @@ class _AddMedicamentoPageState extends State<AddMedicamentoPage> {
       await db.insert('medicamentos', med.toMap());
     }
 
-    // 🔹 Salvar também no SharedPreferences
+    // SharedPreferences (por usuário)
     final prefs = await SharedPreferences.getInstance();
-    final List<String> listaAtualizadaJson =
-        prefs.getStringList('medicamentos') ?? [];
-    List<Medicamento> listaAtualizada = listaAtualizadaJson
-        .map((e) => Medicamento.fromJson(jsonDecode(e)))
-        .toList();
+    final key = 'medicamentos_${_usuarioSelecionado!.id}';
+    final List<String> listaAtualizadaJson = prefs.getStringList(key) ?? [];
+    List<Medicamento> listaAtualizada =
+        listaAtualizadaJson.map((e) => Medicamento.fromJson(jsonDecode(e))).toList();
 
     if (widget.index != null && widget.index! < listaAtualizada.length) {
       listaAtualizada[widget.index!] = med;
@@ -133,11 +142,11 @@ class _AddMedicamentoPageState extends State<AddMedicamentoPage> {
     }
 
     await prefs.setStringList(
-      'medicamentos',
+      key,
       listaAtualizada.map((e) => jsonEncode(e.toJson())).toList(),
     );
 
-    // 🔹 Agendar notificação
+    // Notificação
     NotificationService().scheduleNotification(
       med.id!,
       "Hora do medicamento",
@@ -145,36 +154,14 @@ class _AddMedicamentoPageState extends State<AddMedicamentoPage> {
       fullDateTime,
     );
 
-    Navigator.pop(context, true);
-  }
-
-  // 🔹 Função helper para abrir calendário
-  Future<void> _selecionarData({
-    required DateTime dataAtual,
-    required ValueChanged<DateTime> onDateSelected,
-    DateTime? minDate,
-    DateTime? maxDate,
-  }) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: dataAtual,
-      firstDate: minDate ?? DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: maxDate ?? DateTime.now().add(const Duration(days: 365 * 5)),
-    );
-    if (picked != null) {
-      onDateSelected(picked);
-    }
+    if (mounted) Navigator.pop(context, true);
   }
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('dd/MM/yyyy');
-
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.medicamento != null
-            ? "Editar Medicamento"
-            : "Adicionar Medicamento"),
+        title: Text(widget.medicamento != null ? "Editar Medicamento" : "Adicionar Medicamento"),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
@@ -199,10 +186,7 @@ class _AddMedicamentoPageState extends State<AddMedicamentoPage> {
                 border: OutlineInputBorder(),
               ),
               items: ["Comprimido", "Dose", "Cápsula", "Xarope"]
-                  .map((tipo) => DropdownMenuItem(
-                        value: tipo,
-                        child: Text(tipo),
-                      ))
+                  .map((tipo) => DropdownMenuItem(value: tipo, child: Text(tipo)))
                   .toList(),
               onChanged: (value) {
                 setState(() {
@@ -221,68 +205,63 @@ class _AddMedicamentoPageState extends State<AddMedicamentoPage> {
             ),
             const SizedBox(height: 16),
 
-            // 🔹 Campo Data de Início
-            TextField(
-              readOnly: true,
-              decoration: InputDecoration(
-                labelText: "Início do Tratamento",
-                border: const OutlineInputBorder(),
-                suffixIcon: const Icon(Icons.calendar_today),
-              ),
-              controller: TextEditingController(
-                text: dateFormat.format(dataInicioSelecionada),
-              ),
-              onTap: () => _selecionarData(
-                dataAtual: dataInicioSelecionada,
-                onDateSelected: (picked) {
+            // Início
+            ListTile(
+              title: Text("Início do Tratamento: ${DateFormat('dd/MM/yyyy').format(dataInicioSelecionada)}"),
+              trailing: const Icon(Icons.calendar_today),
+              onTap: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: dataInicioSelecionada,
+                  firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                  lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+                );
+                if (picked != null) {
                   setState(() {
                     dataInicioSelecionada = picked;
                     if (dataFimSelecionada.isBefore(dataInicioSelecionada)) {
-                      dataFimSelecionada =
-                          dataInicioSelecionada.add(const Duration(days: 7));
+                      dataFimSelecionada = dataInicioSelecionada.add(const Duration(days: 7));
                     }
                   });
-                },
+                }
+              },
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: const BorderSide(color: Colors.grey),
               ),
             ),
             const SizedBox(height: 16),
 
-            // 🔹 Campo Data de Fim
-            TextField(
-              readOnly: true,
-              decoration: InputDecoration(
-                labelText: "Fim do Tratamento",
-                border: const OutlineInputBorder(),
-                suffixIcon: const Icon(Icons.calendar_today),
-              ),
-              controller: TextEditingController(
-                text: dateFormat.format(dataFimSelecionada),
-              ),
-              onTap: () => _selecionarData(
-                dataAtual: dataFimSelecionada,
-                minDate: dataInicioSelecionada,
-                onDateSelected: (picked) {
+            // Fim
+            ListTile(
+              title: Text("Fim do Tratamento: ${DateFormat('dd/MM/yyyy').format(dataFimSelecionada)}"),
+              trailing: const Icon(Icons.calendar_today),
+              onTap: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: dataFimSelecionada,
+                  firstDate: dataInicioSelecionada,
+                  lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+                );
+                if (picked != null) {
                   setState(() {
                     dataFimSelecionada = picked;
                   });
-                },
+                }
+              },
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: const BorderSide(color: Colors.grey),
               ),
             ),
             const SizedBox(height: 16),
 
             // Horário
-            TextField(
-              readOnly: true,
-              decoration: InputDecoration(
-                labelText: "Horário",
-                border: const OutlineInputBorder(),
-                suffixIcon: const Icon(Icons.access_time),
-              ),
-              controller: TextEditingController(
-                text: horarioSelecionado.format(context),
-              ),
+            ListTile(
+              title: Text("Horário: ${horarioSelecionado.format(context)}"),
+              trailing: const Icon(Icons.access_time),
               onTap: () async {
-                final TimeOfDay? hora = await showTimePicker(
+                final hora = await showTimePicker(
                   context: context,
                   initialTime: horarioSelecionado,
                 );
@@ -292,21 +271,22 @@ class _AddMedicamentoPageState extends State<AddMedicamentoPage> {
                   });
                 }
               },
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: const BorderSide(color: Colors.grey),
+              ),
             ),
             const SizedBox(height: 32),
+
             ElevatedButton(
               onPressed: _saveMedicamento,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 15),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              child: Text(widget.medicamento != null
-                  ? "Salvar Alterações"
-                  : "Adicionar Medicamento"),
+              child: Text(widget.medicamento != null ? "Salvar Alterações" : "Adicionar Medicamento"),
             ),
           ],
         ),

@@ -9,7 +9,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'pages/home_page.dart';
 import 'pages/tratamentos_page.dart';
 import 'services/notification_service.dart';
-import 'models/medicamento.dart';
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -36,7 +35,7 @@ class _MyAppState extends State<MyApp> {
   int _selectedIndex = 0;
 
   final List<Widget> _pages = [
-    const HomePage(),
+    const HomePage(), // 🔹 sempre abre aqui
     TratamentosPage(),
   ];
 
@@ -54,7 +53,7 @@ class _MyAppState extends State<MyApp> {
       supportedLocales: const [
         Locale('pt', 'BR'),
       ],
-      locale: const Locale('pt', 'BR'), // 👈 força português Brasil
+      locale: const Locale('pt', 'BR'),
 
       home: Scaffold(
         body: _pages[_selectedIndex],

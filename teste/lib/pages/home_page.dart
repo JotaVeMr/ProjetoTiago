@@ -6,9 +6,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 import '../models/medicamento.dart';
+import '../models/usuario.dart';
 import '../services/notification_service.dart';
 import '../services/database_helper.dart';
+import '../services/app_event_bus.dart';
 import 'add_medicamento_page.dart';
+import 'configurar_perfil_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -18,6 +21,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  Usuario? usuarioSelecionado;
   List<Medicamento> medicamentos = [];
   CalendarFormat _calendarFormat = CalendarFormat.week;
   DateTime _focusedDay = DateTime.now();
@@ -27,18 +31,58 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _selectedDay = _focusedDay;
-    _loadMedicamentos();
+
+    // Ouve alterações globais (ex.: exclusão/edição/adição na aba Medicamentos ou perfis)
+    AppEventBus.I.medicamentosChanged.addListener(_loadMedicamentos);
+    _loadUsuarioSelecionado();
   }
 
-  // Carrega medicamentos
-  Future<void> _loadMedicamentos() async {
+  @override
+  void dispose() {
+    AppEventBus.I.medicamentosChanged.removeListener(_loadMedicamentos);
+    super.dispose();
+  }
+
+  /// Carrega usuário selecionado do SharedPreferences
+  Future<void> _loadUsuarioSelecionado() async {
     final prefs = await SharedPreferences.getInstance();
-    final data = prefs.getStringList('medicamentos') ?? [];
+    final usuarioJson = prefs.getString("usuarioSelecionado");
+
+    if (usuarioJson != null) {
+      setState(() {
+        // usamos toMap() na hora de salvar => aqui usamos fromMap
+        usuarioSelecionado = Usuario.fromMap(jsonDecode(usuarioJson));
+      });
+      await _loadMedicamentos();
+    } else {
+      // sem usuário selecionado, não forçamos navegação. Mostra "Perfil" no topo.
+      setState(() {
+        usuarioSelecionado = null;
+        medicamentos = [];
+      });
+    }
+  }
+
+  /// Carrega medicamentos do DB e SharedPreferences (por usuário)
+  Future<void> _loadMedicamentos() async {
+    if (!mounted) return;
+
+    if (usuarioSelecionado == null || usuarioSelecionado!.id == null) {
+      setState(() => medicamentos = []);
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final data =
+        prefs.getStringList('medicamentos_${usuarioSelecionado!.id}') ?? [];
     List<Medicamento> prefsList =
         data.map((e) => Medicamento.fromJson(jsonDecode(e))).toList();
 
-    List<Medicamento> dbList = await DatabaseHelper.instance.getMedicamentos();
+    // busca do SQLite filtrando por usuarioId
+    List<Medicamento> dbList = await DatabaseHelper.instance
+        .getMedicamentos(usuarioId: usuarioSelecionado!.id!);
 
+    // unifica (prefere o último por chave)
     final Map<String, Medicamento> mapa = {};
     for (final m in prefsList) {
       final key =
@@ -54,9 +98,7 @@ class _HomePageState extends State<HomePage> {
     // Atualiza automaticamente status PENDENTE
     final now = DateTime.now();
     for (var med in mapa.values) {
-      if (!med.isTaken &&
-          !med.isIgnored &&
-          med.scheduledDateTime.isBefore(now)) {
+      if (!med.isTaken && !med.isIgnored && med.scheduledDateTime.isBefore(now)) {
         med.isPendente = true;
         await DatabaseHelper.instance.updateMedicamento(med);
       }
@@ -64,23 +106,27 @@ class _HomePageState extends State<HomePage> {
 
     setState(() {
       medicamentos = mapa.values.toList();
-      medicamentos
-          .sort((a, b) => a.scheduledDateTime.compareTo(b.scheduledDateTime));
+      medicamentos.sort((a, b) => a.scheduledDateTime.compareTo(b.scheduledDateTime));
     });
 
     await _syncToStorage();
   }
 
   Future<void> _saveMedicamentosLocalOnly() async {
+    if (usuarioSelecionado == null || usuarioSelecionado!.id == null) return;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('medicamentos',
-        medicamentos.map((e) => jsonEncode(e.toJson())).toList());
+    await prefs.setStringList(
+      'medicamentos_${usuarioSelecionado!.id}',
+      medicamentos.map((e) => jsonEncode(e.toJson())).toList(),
+    );
   }
 
   Future<void> _syncToStorage() async {
+    if (usuarioSelecionado == null || usuarioSelecionado!.id == null) return;
     final prefs = await SharedPreferences.getInstance();
 
     for (final med in medicamentos) {
+      med.usuarioId = usuarioSelecionado!.id; // garante vínculo
       if (med.id != null) {
         await DatabaseHelper.instance.updateMedicamento(med);
       } else {
@@ -89,16 +135,17 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
-    await prefs.setStringList('medicamentos',
-        medicamentos.map((e) => jsonEncode(e.toJson())).toList());
+    await prefs.setStringList(
+      'medicamentos_${usuarioSelecionado!.id}',
+      medicamentos.map((e) => jsonEncode(e.toJson())).toList(),
+    );
   }
 
-  // Lista de medicamentos que aparecem NA LISTA (considera o período)
+  /// Lista de medicamentos que aparecem NA LISTA (considera o período)
   List<Medicamento> _getMedicamentosForSelectedDay(DateTime day) {
     return medicamentos.where((med) {
       final inicio = DateTime.parse(med.dataInicio);
       final fim = DateTime.parse(med.dataFim);
-
       final diaSelecionado = DateTime(day.year, day.month, day.day);
 
       return (diaSelecionado.isAfter(inicio.subtract(const Duration(days: 1))) &&
@@ -106,7 +153,7 @@ class _HomePageState extends State<HomePage> {
     }).toList();
   }
 
-  // Eventos do calendário → bolinha só na data INICIAL
+  /// Eventos do calendário → bolinha só na data INICIAL
   List<dynamic> _getEventosDoCalendario(DateTime day) {
     return medicamentos.where((med) {
       final inicio = DateTime.parse(med.dataInicio);
@@ -122,6 +169,87 @@ class _HomePageState extends State<HomePage> {
     if (result == true) {
       await _loadMedicamentos();
     }
+  }
+
+  void _navigateToConfigurarPerfilPage() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const ConfigurarPerfilPage()),
+    );
+    if (result == true) {
+      await _loadUsuarioSelecionado(); // recarrega seleção e medicamentos
+    }
+  }
+
+  /// Seletor rápido de perfis (BottomSheet)
+  Future<void> _openSeletorPerfil() async {
+    final usuarios = await DatabaseHelper.instance.getUsuarios();
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Trocar perfil',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+
+              if (usuarios.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Text('Nenhum perfil cadastrado.'),
+                ),
+
+              ...usuarios.map((u) => ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.blue.shade100,
+                      child: Text(
+                        u.nome.isNotEmpty ? u.nome.characters.first.toUpperCase() : '?',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                    title: Text(u.nome),
+                    onTap: () async {
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setString('usuarioSelecionado', jsonEncode(u.toMap()));
+                      if (!mounted) return;
+                      Navigator.pop(ctx);
+                      setState(() => usuarioSelecionado = u);
+                      await _loadMedicamentos();
+                    },
+                  )),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.manage_accounts),
+                title: const Text('Gerenciar perfis'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _navigateToConfigurarPerfilPage();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   // ==== Pop-up de ações do medicamento ====
@@ -157,8 +285,8 @@ class _HomePageState extends State<HomePage> {
                 ),
                 Text(
                   medicamento.nome,
-                  style: const TextStyle(
-                      fontSize: 24, fontWeight: FontWeight.bold),
+                  style:
+                      const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
                 Text(
@@ -180,11 +308,13 @@ class _HomePageState extends State<HomePage> {
                       });
                       await DatabaseHelper.instance.updateMedicamento(medicamento);
                       await _saveMedicamentosLocalOnly();
+                      if (!mounted) return;
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                            content: Text(
-                                '${medicamento.nome} marcado como tomado!')),
+                          content:
+                              Text('${medicamento.nome} marcado como tomado!'),
+                        ),
                       );
                     },
                     style: ElevatedButton.styleFrom(
@@ -194,8 +324,8 @@ class _HomePageState extends State<HomePage> {
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10)),
                     ),
-                    child:
-                        const Text("Tomar agora", style: TextStyle(fontSize: 18)),
+                    child: const Text("Tomar agora",
+                        style: TextStyle(fontSize: 18)),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -248,10 +378,13 @@ class _HomePageState extends State<HomePage> {
                       );
 
                       await _loadMedicamentos();
+                      if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                            content: Text(
-                                '${medicamento.nome} reagendado para ${TimeOfDay(hour: newScheduledDateTime.hour, minute: newScheduledDateTime.minute).format(context)}')),
+                          content: Text(
+                            '${medicamento.nome} reagendado para ${TimeOfDay(hour: newScheduledDateTime.hour, minute: newScheduledDateTime.minute).format(context)}',
+                          ),
+                        ),
                       );
                     },
                     style: ElevatedButton.styleFrom(
@@ -274,16 +407,17 @@ class _HomePageState extends State<HomePage> {
                     onPressed: () async {
                       setState(() {
                         medicamento.isTaken = false;
-                        medicamento.isIgnored = true; // agora é "esquecido"
+                        medicamento.isIgnored = true;
                         medicamento.isPendente = false;
                       });
                       await DatabaseHelper.instance.updateMedicamento(medicamento);
                       await _saveMedicamentosLocalOnly();
+                      if (!mounted) return;
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                            content: Text(
-                                '${medicamento.nome} marcado como esquecido.')),
+                          content: Text('${medicamento.nome} marcado como esquecido.'),
+                        ),
                       );
                     },
                     style: OutlinedButton.styleFrom(
@@ -332,28 +466,63 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+        leadingWidth: 140,
+        leading: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: _openSeletorPerfil, // seletor rápido de perfil
+          child: Padding(
+            padding: const EdgeInsets.only(left: 12.0),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Colors.blue.shade100,
+                  child: Text(
+                    (usuarioSelecionado?.nome.isNotEmpty ?? false)
+                        ? usuarioSelecionado!.nome.characters.first.toUpperCase()
+                        : 'P',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          usuarioSelecionado?.nome ?? 'Perfil',
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.keyboard_arrow_down, size: 18),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
         title: RichText(
           text: const TextSpan(
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             children: <TextSpan>[
-              TextSpan(
-                text: 'pharm',
-                style: TextStyle(color: Colors.blue),
-              ),
-              TextSpan(
-                text: 'Sync',
-                style: TextStyle(color: Colors.black),
-              ),
+              TextSpan(text: 'pharm', style: TextStyle(color: Colors.blue)),
+              TextSpan(text: 'Sync', style: TextStyle(color: Colors.black)),
             ],
           ),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings, color: Colors.black54),
+            onPressed: _navigateToConfigurarPerfilPage, // gerenciar perfis
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -399,7 +568,8 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             eventLoader: (day) {
-              return _getEventosDoCalendario(day); // só dataInicio
+              // bolinha só no INÍCIO de cada tratamento
+              return _getEventosDoCalendario(day);
             },
             calendarBuilders: CalendarBuilders(
               markerBuilder: (context, date, events) {
@@ -431,8 +601,8 @@ class _HomePageState extends State<HomePage> {
                     itemBuilder: (context, index) {
                       final med = medicamentosForSelectedDay[index];
                       return Card(
-                        margin: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
+                        margin:
+                            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         elevation: 2,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10)),
@@ -503,8 +673,7 @@ class _HomePageState extends State<HomePage> {
             style: TextStyle(color: Colors.white)),
         icon: const Icon(Icons.add, color: Colors.white),
         backgroundColor: Colors.blue,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(30.0)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30.0)),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
