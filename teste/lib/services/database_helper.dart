@@ -23,7 +23,7 @@ class DatabaseHelper {
       path,
       version: 3,
       onConfigure: (db) async {
-        // importante p/ ON DELETE CASCADE funcionar
+        
         await db.execute('PRAGMA foreign_keys = ON');
       },
       onCreate: _createDB,
@@ -61,7 +61,7 @@ class DatabaseHelper {
       )
     ''');
 
-    // Tratamentos (mantido se você usa)
+    // Tratamentos 
     await db.execute('''
       CREATE TABLE tratamentos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,12 +75,12 @@ class DatabaseHelper {
   }
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
-    // v2: adicionou dataInicio/dataFim em medicamentos
+    
     if (oldVersion < 2) {
       await db.execute("ALTER TABLE medicamentos ADD COLUMN dataInicio TEXT");
       await db.execute("ALTER TABLE medicamentos ADD COLUMN dataFim TEXT");
     }
-    // v3: criou usuarios e coluna usuarioId + campos novos de usuario
+    
     if (oldVersion < 3) {
       await db.execute('PRAGMA foreign_keys = OFF');
 
@@ -95,7 +95,7 @@ class DatabaseHelper {
       ''');
 
       final cols = await db.rawQuery(
-          "PRAGMA table_info(medicamentos)"); // vê se já existe usuarioId
+          "PRAGMA table_info(medicamentos)"); 
       final hasUsuarioId =
           cols.any((c) => (c['name'] as String?)?.toLowerCase() == 'usuarioid');
       if (!hasUsuarioId) {
@@ -107,7 +107,7 @@ class DatabaseHelper {
     }
   }
 
-  // ------------------ USUÁRIOS ------------------
+  
   Future<int> insertUsuario(Usuario usuario) async {
     final db = await database;
     return await db.insert(
@@ -144,11 +144,11 @@ class DatabaseHelper {
 
   Future<int> deleteUsuario(int id) async {
     final db = await database;
-    // ON DELETE CASCADE apagará medicamentos vinculados
+    
     return await db.delete('usuarios', where: 'id = ?', whereArgs: [id]);
   }
 
-  // ---------------- MEDICAMENTOS ----------------
+  
   Future<int> insertMedicamento(Medicamento med) async {
     final db = await database;
     return await db.insert(
@@ -191,7 +191,7 @@ class DatabaseHelper {
         .delete('medicamentos', where: 'usuarioId = ?', whereArgs: [usuarioId]);
   }
 
-  // --------------- TRATAMENTOS (opcional) ---------------
+  
   Future<int> insertTratamento(Map<String, dynamic> t) async {
     final db = await database;
     return await db.insert('tratamentos', t,
