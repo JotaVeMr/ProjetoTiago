@@ -6,7 +6,7 @@ class AppEventBus {
   AppEventBus._();
   static final AppEventBus I = AppEventBus._();
 
-  /// incrementa para avisar mudança
+  
   final ValueNotifier<int> medicamentosChanged = ValueNotifier<int>(0);
 
   void bumpMedChange() {
