@@ -35,7 +35,7 @@ class _TratamentosPageState extends State<TratamentosPage> {
     setState(() {});
   }
 
-  // Carrega os medicamentos salvos (SharedPreferences + SQLite) por usuário
+  
   Future<void> _loadMedicamentos() async {
     if (usuarioSelecionado == null || usuarioSelecionado!.id == null) {
       setState(() => medicamentos = []);
@@ -73,7 +73,7 @@ class _TratamentosPageState extends State<TratamentosPage> {
 
     final prefs = await SharedPreferences.getInstance();
 
-    // sync para db (garante usuarioId)
+    
     for (final med in medicamentos) {
       med.usuarioId = usuarioSelecionado!.id;
       if (med.id != null) {
@@ -84,14 +84,14 @@ class _TratamentosPageState extends State<TratamentosPage> {
       }
     }
 
-    // salvar em prefs por usuário
+    
     await prefs.setStringList(
       'medicamentos_${usuarioSelecionado!.id}',
       medicamentos.map((e) => jsonEncode(e.toJson())).toList(),
     );
   }
 
-  // Abre a tela para adicionar/editar medicamento
+  
   void _navigateToAddMedicamentoPage({Medicamento? medicamento, int? index}) async {
     final result = await Navigator.push(
       context,
@@ -104,11 +104,11 @@ class _TratamentosPageState extends State<TratamentosPage> {
     );
     if (result == true) {
       await _loadMedicamentos();
-      AppEventBus.I.bumpMedChange(); // avisa Home
+      AppEventBus.I.bumpMedChange(); 
     }
   }
 
-  // Confirmação e exclusão de medicamento
+  
   void _deleteMedicamento(int index) async {
     final med = medicamentos[index];
     showDialog(
@@ -136,7 +136,7 @@ class _TratamentosPageState extends State<TratamentosPage> {
                   medicamentos.removeAt(index);
                 });
                 await _syncToStorage();
-                AppEventBus.I.bumpMedChange(); // avisa Home para recarregar
+                AppEventBus.I.bumpMedChange(); 
               },
             ),
           ],
