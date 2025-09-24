@@ -32,7 +32,7 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _selectedDay = _focusedDay;
 
-    // Ouve alterações globais (ex.: exclusão/edição/adição na aba Medicamentos ou perfis)
+    
     AppEventBus.I.medicamentosChanged.addListener(_loadMedicamentos);
     _loadUsuarioSelecionado();
   }
@@ -43,7 +43,7 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  /// Carrega usuário selecionado do SharedPreferences
+  
   Future<void> _loadUsuarioSelecionado() async {
     final prefs = await SharedPreferences.getInstance();
     final usuarioJson = prefs.getString("usuarioSelecionado");
@@ -55,7 +55,7 @@ class _HomePageState extends State<HomePage> {
       });
       await _loadMedicamentos();
     } else {
-      // sem usuário selecionado, não forçamos navegação. Mostra "Perfil" no topo.
+      
       setState(() {
         usuarioSelecionado = null;
         medicamentos = [];
@@ -63,7 +63,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  /// Carrega medicamentos do DB e SharedPreferences (por usuário)
+  
   Future<void> _loadMedicamentos() async {
     if (!mounted) return;
 
@@ -78,11 +78,11 @@ class _HomePageState extends State<HomePage> {
     List<Medicamento> prefsList =
         data.map((e) => Medicamento.fromJson(jsonDecode(e))).toList();
 
-    // busca do SQLite filtrando por usuarioId
+    
     List<Medicamento> dbList = await DatabaseHelper.instance
         .getMedicamentos(usuarioId: usuarioSelecionado!.id!);
 
-    // unifica (prefere o último por chave)
+    
     final Map<String, Medicamento> mapa = {};
     for (final m in prefsList) {
       final key =
@@ -95,7 +95,7 @@ class _HomePageState extends State<HomePage> {
       mapa[key] = m;
     }
 
-    // Atualiza automaticamente status PENDENTE
+    
     final now = DateTime.now();
     for (var med in mapa.values) {
       if (!med.isTaken && !med.isIgnored && med.scheduledDateTime.isBefore(now)) {
@@ -126,7 +126,7 @@ class _HomePageState extends State<HomePage> {
     final prefs = await SharedPreferences.getInstance();
 
     for (final med in medicamentos) {
-      med.usuarioId = usuarioSelecionado!.id; // garante vínculo
+      med.usuarioId = usuarioSelecionado!.id; 
       if (med.id != null) {
         await DatabaseHelper.instance.updateMedicamento(med);
       } else {
@@ -141,7 +141,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// Lista de medicamentos que aparecem NA LISTA (considera o período)
+  
   List<Medicamento> _getMedicamentosForSelectedDay(DateTime day) {
     return medicamentos.where((med) {
       final inicio = DateTime.parse(med.dataInicio);
@@ -153,7 +153,7 @@ class _HomePageState extends State<HomePage> {
     }).toList();
   }
 
-  /// Eventos do calendário → bolinha só na data INICIAL
+  
   List<dynamic> _getEventosDoCalendario(DateTime day) {
     return medicamentos.where((med) {
       final inicio = DateTime.parse(med.dataInicio);
@@ -177,11 +177,11 @@ class _HomePageState extends State<HomePage> {
       MaterialPageRoute(builder: (context) => const ConfigurarPerfilPage()),
     );
     if (result == true) {
-      await _loadUsuarioSelecionado(); // recarrega seleção e medicamentos
+      await _loadUsuarioSelecionado(); 
     }
   }
 
-  /// Seletor rápido de perfis (BottomSheet)
+  
   Future<void> _openSeletorPerfil() async {
     final usuarios = await DatabaseHelper.instance.getUsuarios();
     if (!mounted) return;
@@ -252,7 +252,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ==== Pop-up de ações do medicamento ====
+  
   void _showMedicamentoActions(Medicamento medicamento, int index) {
     showModalBottomSheet(
       context: context,
@@ -472,7 +472,7 @@ class _HomePageState extends State<HomePage> {
         leadingWidth: 140,
         leading: InkWell(
           borderRadius: BorderRadius.circular(24),
-          onTap: _openSeletorPerfil, // seletor rápido de perfil
+          onTap: _openSeletorPerfil, 
           child: Padding(
             padding: const EdgeInsets.only(left: 12.0),
             child: Row(
@@ -568,7 +568,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             eventLoader: (day) {
-              // bolinha só no INÍCIO de cada tratamento
+              
               return _getEventosDoCalendario(day);
             },
             calendarBuilders: CalendarBuilders(
