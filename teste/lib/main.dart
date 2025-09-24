@@ -35,7 +35,7 @@ class _MyAppState extends State<MyApp> {
   int _selectedIndex = 0;
 
   final List<Widget> _pages = [
-    const HomePage(), // 🔹 sempre abre aqui
+    const HomePage(), 
     TratamentosPage(),
   ];
 
@@ -44,7 +44,7 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
 
-      // 👇 Localização configurada
+      
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
