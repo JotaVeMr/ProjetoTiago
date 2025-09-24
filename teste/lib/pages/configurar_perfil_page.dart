@@ -39,7 +39,7 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
       nome: _nomeCtrl.text.trim(),
       sobrenome: _sobrenomeCtrl.text.trim(),
       sexo: _sexo,
-      pin: _pinCtrl.text.trim(), // opcional
+      pin: _pinCtrl.text.trim(), 
       id: null,
     );
 
@@ -50,7 +50,7 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
         _usuarios.add(criado);
       });
 
-      // também já seleciona como perfil ativo
+      
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('usuarioSelecionado', jsonEncode(criado.toMap()));
 
@@ -64,7 +64,7 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
       _pinCtrl.clear();
       setState(() => _sexo = Sexo.outro);
 
-      // avisa a tela anterior para recarregar
+      
       Navigator.pop(context, true);
     }
   }
@@ -73,14 +73,14 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('usuarioSelecionado', jsonEncode(u.toMap()));
     if (!mounted) return;
-    Navigator.pop(context, true); // volta para a Home recarregar
+    Navigator.pop(context, true); 
   }
 
   Future<void> _removerUsuario(Usuario u) async {
     String? pinDigitado;
 
     if (u.pin.isNotEmpty) {
-      // pede PIN se existir
+     
       pinDigitado = await showDialog<String>(
         context: context,
         builder: (ctx) {
@@ -126,7 +126,7 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
         return;
       }
     } else {
-      // sem PIN: confirma simples
+      
       final confirma = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -148,10 +148,10 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
       if (confirma != true) return;
     }
 
-    // Remove no banco; CASCADE apaga os medicamentos
+    
     await DatabaseHelper.instance.deleteUsuario(u.id!);
 
-    // Se era o selecionado, limpa seleção
+    
     final prefs = await SharedPreferences.getInstance();
     final sel = prefs.getString('usuarioSelecionado');
     if (sel != null) {
@@ -168,7 +168,7 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
       const SnackBar(content: Text('Perfil removido.')),
     );
 
-    // Se não há mais usuários, apenas fecha retornando true
+    
     if (_usuarios.isEmpty) {
       Navigator.pop(context, true);
     }
@@ -195,7 +195,7 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Form de criação
+            
             Form(
               key: _formKey,
               child: Column(
