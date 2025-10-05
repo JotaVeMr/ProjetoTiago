@@ -22,7 +22,7 @@ android {
 
    defaultConfig {
     applicationId = "tiago.teste"
-    minSdkVersion(23)
+    minSdk = 24
     targetSdk = flutter.targetSdkVersion
     versionCode = flutter.versionCode
     versionName = flutter.versionName

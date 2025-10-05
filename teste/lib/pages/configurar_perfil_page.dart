@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:local_auth/local_auth.dart';
 
 import '../models/usuario.dart';
 import '../services/database_helper.dart';
@@ -16,10 +17,10 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
   final _formKey = GlobalKey<FormState>();
   final _nomeCtrl = TextEditingController();
   final _sobrenomeCtrl = TextEditingController();
-  final _pinCtrl = TextEditingController();
 
   Sexo _sexo = Sexo.outro;
   List<Usuario> _usuarios = [];
+  final LocalAuthentication _localAuth = LocalAuthentication();
 
   @override
   void initState() {
@@ -39,18 +40,15 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
       nome: _nomeCtrl.text.trim(),
       sobrenome: _sobrenomeCtrl.text.trim(),
       sexo: _sexo,
-      pin: _pinCtrl.text.trim(), // opcional
+      pin: '', // não usamos mais PIN manual
       id: null,
     );
 
     final id = await DatabaseHelper.instance.insertUsuario(novo);
     if (id != 0) {
       final criado = novo.copyWith(id: id);
-      setState(() {
-        _usuarios.add(criado);
-      });
+      setState(() => _usuarios.add(criado));
 
-      // também já seleciona como perfil ativo
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('usuarioSelecionado', jsonEncode(criado.toMap()));
 
@@ -61,10 +59,8 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
 
       _nomeCtrl.clear();
       _sobrenomeCtrl.clear();
-      _pinCtrl.clear();
       setState(() => _sexo = Sexo.outro);
 
-      // avisa a tela anterior para recarregar
       Navigator.pop(context, true);
     }
   }
@@ -73,85 +69,76 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('usuarioSelecionado', jsonEncode(u.toMap()));
     if (!mounted) return;
-    Navigator.pop(context, true); // volta para a Home recarregar
+    Navigator.pop(context, true);
+  }
+
+  /// 🔒 Autenticação local antes da remoção (PIN/senha/padrão)
+  Future<bool> _autenticarLocalmente() async {
+    try {
+      final isSupported = await _localAuth.isDeviceSupported();
+      final canCheck = await _localAuth.canCheckBiometrics;
+      final available = await _localAuth.getAvailableBiometrics();
+
+      debugPrint('=== LOCAL AUTH DEBUG ===');
+      debugPrint('isSupported: $isSupported');
+      debugPrint('canCheckBiometrics: $canCheck');
+      debugPrint('availableBiometrics: $available');
+      debugPrint('=========================');
+
+      if (!isSupported) {
+        debugPrint('Dispositivo não suporta autenticação local.');
+        return true; // permite se não for suportado
+      }
+
+      final didAuthenticate = await _localAuth.authenticate(
+        localizedReason: 'Confirme sua identidade para remover o perfil.',
+        options: const AuthenticationOptions(
+          biometricOnly: false, // permite PIN/padrão do sistema
+          stickyAuth: true, // mantém ativo durante troca de tela
+          sensitiveTransaction: true,
+        ),
+      );
+
+      debugPrint('Resultado da autenticação: $didAuthenticate');
+      return didAuthenticate;
+    } catch (e) {
+      debugPrint('Erro na autenticação local: $e');
+      return false;
+    }
   }
 
   Future<void> _removerUsuario(Usuario u) async {
-    String? pinDigitado;
-
-    if (u.pin.isNotEmpty) {
-      // pede PIN se existir
-      pinDigitado = await showDialog<String>(
-        context: context,
-        builder: (ctx) {
-          final controller = TextEditingController();
-          return AlertDialog(
-            title: const Text('Confirmar remoção'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Informe o PIN do perfil para remover.'),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: controller,
-                  keyboardType: TextInputType.number,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    labelText: 'PIN',
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancelar'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-                child: const Text('Remover', style: TextStyle(color: Colors.red)),
-              ),
-            ],
-          );
-        },
+    final autenticado = await _autenticarLocalmente();
+    if (!autenticado) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Autenticação falhou.')),
       );
-
-      if (pinDigitado == null) return;
-      if (pinDigitado != u.pin) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('PIN incorreto.')),
-        );
-        return;
-      }
-    } else {
-      // sem PIN: confirma simples
-      final confirma = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Remover perfil'),
-          content:
-              Text('Tem certeza que deseja remover o perfil "${u.nome}"?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Remover', style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        ),
-      );
-      if (confirma != true) return;
+      return;
     }
 
-    // Remove no banco; CASCADE apaga os medicamentos
+    final confirma = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Remover perfil'),
+        content: Text('Tem certeza que deseja remover o perfil "${u.nome}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Remover', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirma != true) return;
+
     await DatabaseHelper.instance.deleteUsuario(u.id!);
 
-    // Se era o selecionado, limpa seleção
     final prefs = await SharedPreferences.getInstance();
     final sel = prefs.getString('usuarioSelecionado');
     if (sel != null) {
@@ -165,10 +152,9 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Perfil removido.')),
+      const SnackBar(content: Text('Perfil removido com sucesso.')),
     );
 
-    // Se não há mais usuários, apenas fecha retornando true
     if (_usuarios.isEmpty) {
       Navigator.pop(context, true);
     }
@@ -178,7 +164,6 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
   void dispose() {
     _nomeCtrl.dispose();
     _sobrenomeCtrl.dispose();
-    _pinCtrl.dispose();
     super.dispose();
   }
 
@@ -195,15 +180,13 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Form de criação
             Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Adicionar novo perfil',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _nomeCtrl,
@@ -234,33 +217,16 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
                         value: _sexo,
                         items: const [
                           DropdownMenuItem(
-                            value: Sexo.masculino,
-                            child: Text('Masculino'),
-                          ),
+                              value: Sexo.masculino, child: Text('Masculino')),
                           DropdownMenuItem(
-                            value: Sexo.feminino,
-                            child: Text('Feminino'),
-                          ),
-                          DropdownMenuItem(
-                            value: Sexo.outro,
-                            child: Text('Outro'),
-                          ),
+                              value: Sexo.feminino, child: Text('Feminino')),
+                          DropdownMenuItem(value: Sexo.outro, child: Text('Outro')),
                         ],
                         onChanged: (v) {
                           if (v == null) return;
                           setState(() => _sexo = v);
                         },
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _pinCtrl,
-                    keyboardType: TextInputType.number,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Definir PIN (opcional, exigido só para excluir)',
-                      border: OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -271,7 +237,6 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
                           onPressed: () {
                             _nomeCtrl.clear();
                             _sobrenomeCtrl.clear();
-                            _pinCtrl.clear();
                             setState(() => _sexo = Sexo.outro);
                           },
                           child: const Text('Cancelar'),
@@ -289,21 +254,17 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
                 ],
               ),
             ),
-
             const SizedBox(height: 24),
             const Divider(),
             const SizedBox(height: 8),
-
             const Text('Perfis cadastrados',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
-
             if (_usuarios.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 24),
                 child: Center(child: Text('Nenhum perfil cadastrado.')),
               ),
-
             ..._usuarios.map((u) {
               return Card(
                 child: ListTile(
@@ -317,13 +278,10 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
                     ),
                   ),
                   title: Text(u.nome),
-                  subtitle: Text(
-                    [
-                      if (u.sobrenome.trim().isNotEmpty) u.sobrenome,
-                      sexoToString(u.sexo),
-                      if (u.pin.isNotEmpty) 'PIN definido'
-                    ].join(' • '),
-                  ),
+                  subtitle: Text([
+                    if (u.sobrenome.trim().isNotEmpty) u.sobrenome,
+                    sexoToString(u.sexo),
+                  ].join(' • ')),
                   onTap: () => _selecionarUsuario(u),
                   trailing: IconButton(
                     tooltip: 'Remover perfil',
