@@ -5,6 +5,9 @@ import 'package:local_auth/local_auth.dart';
 
 import '../models/usuario.dart';
 import '../services/database_helper.dart';
+import '../main.dart' as app; // ✅ adicionado para voltar ao MyApp após criar perfil
+
+
 
 class ConfigurarPerfilPage extends StatefulWidget {
   const ConfigurarPerfilPage({super.key});
@@ -61,7 +64,14 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
       _sobrenomeCtrl.clear();
       setState(() => _sexo = Sexo.outro);
 
-      Navigator.pop(context, true);
+      // ✅ Corrigido: volta para o app completo (MyApp) com abas
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const app.MyApp(onboardingDone: true,isDarkTheme: false,),
+        ),
+        (route) => false,
+      );
     }
   }
 
@@ -94,7 +104,7 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
         localizedReason: 'Confirme sua identidade para remover o perfil.',
         options: const AuthenticationOptions(
           biometricOnly: false, // permite PIN/padrão do sistema
-          stickyAuth: true, // mantém ativo durante troca de tela
+          stickyAuth: true,
           sensitiveTransaction: true,
         ),
       );

@@ -463,6 +463,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final medicamentosForSelectedDay =
         _selectedDay != null ? _getMedicamentosForSelectedDay(_selectedDay!) : [];
+         final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -579,8 +580,8 @@ class _HomePageState extends State<HomePage> {
                     child: Container(
                       width: 7,
                       height: 7,
-                      decoration: const BoxDecoration(
-                        color: Colors.black,
+                      decoration:  BoxDecoration(
+                        color: isDark ? Colors.white : Colors.black,
                         shape: BoxShape.circle,
                       ),
                     ),
