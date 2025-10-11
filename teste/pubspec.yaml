@@ -21,6 +21,7 @@ dependencies:
   sqflite: ^2.3.3+1
   path: ^1.9.0
   local_auth: ^2.1.6
+  share_plus: ^10.0.0
   
 
 dev_dependencies:
@@ -51,3 +52,6 @@ flutter:
   assets:
     - assets/icon/icon.png
     - assets/icon/pagina2.png
+    - assets/images/calendario.png
+    - assets/images/ConfigPerfil.png
+    - assets/images/iconeSemFundo.png

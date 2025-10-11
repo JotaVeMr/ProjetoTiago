@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:flutter/services.dart';
 
 import '../models/medicamento.dart';
 import '../models/usuario.dart';
@@ -252,7 +254,66 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ==== Pop-up de ações do medicamento ====
+  // ==== UTILITÁRIOS DE TEXTO / COMPARTILHAMENTO ====
+
+  /// Monta um texto com 1 ou mais medicamentos.
+  String _montarResumoMedicamentos({
+    required Usuario perfil,
+    required List<Medicamento> meds,
+    DateTime? dia,
+    DateTime? inicio,
+    DateTime? fim,
+  }) {
+    final dfData = DateFormat('dd/MM/yyyy');
+    final dfHora = DateFormat('HH:mm');
+
+    final cab = StringBuffer()
+      ..writeln('📋 Agenda de medicamentos PharmSync')
+      ..writeln('👤 Paciente: ${perfil.nome}');
+    if (inicio != null && fim != null) {
+      cab.writeln('🗓 Período: ${dfData.format(inicio)} a ${dfData.format(fim)}');
+    } else if (dia != null) {
+      cab.writeln('🗓 Dia: ${dfData.format(dia)}');
+    }
+    cab.writeln('');
+
+    final corpo = StringBuffer();
+    if (meds.isEmpty) {
+      corpo.writeln('Sem medicamentos neste período.');
+    } else {
+      for (final m in meds) {
+        final nome = m.nome;
+        final tipo = m.tipo;
+        final dose = m.dose;
+        final h =
+            m.scheduledDateTime != null ? dfHora.format(m.scheduledDateTime) : '';
+        final ini = DateFormat('dd/MM/yyyy').format(DateTime.parse(m.dataInicio));
+        final ff = DateFormat('dd/MM/yyyy').format(DateTime.parse(m.dataFim));
+
+        corpo.writeln('• $nome'
+            '${tipo.isNotEmpty ? ' ($tipo)' : ''}'
+            '${dose.isNotEmpty ? ' - $dose' : ''}'
+            '${h.isNotEmpty ? ' - $h' : ''}');
+        corpo.writeln('  Tratamento: $ini até $ff');
+
+
+        if (m.isTaken || m.isIgnored || m.isPendente) {
+          final status = m.isTaken
+              ? 'Tomado'
+              : m.isIgnored
+                  ? 'Esquecido'
+                  : 'Pendente';
+          corpo.writeln('  Status: $status');
+        }
+
+        corpo.writeln('');
+      }
+    }
+
+    return (cab.toString() + corpo.toString()).trimRight();
+  }
+
+  // ==== Pop-up de ações do medicamento (sem copiar/compartilhar aqui, somente no menu ⋮) ====
   void _showMedicamentoActions(Medicamento medicamento, int index) {
     showModalBottomSheet(
       context: context,
@@ -463,7 +524,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final medicamentosForSelectedDay =
         _selectedDay != null ? _getMedicamentosForSelectedDay(_selectedDay!) : [];
-         final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -624,8 +685,8 @@ class _HomePageState extends State<HomePage> {
                               Text(
                                 "Tratamento: ${DateFormat('dd/MM/yyyy').format(DateTime.parse(med.dataInicio))} até ${DateFormat('dd/MM/yyyy').format(DateTime.parse(med.dataFim))}",
                                 style: const TextStyle(
-                                    color: Colors.black54,
-                                    fontStyle: FontStyle.normal,
+                                    color: Color.fromARGB(136, 58, 67, 112), //mudei a cor da Tratamento(Tema dark estava muito escuro)
+                                    fontStyle: FontStyle.italic,
                                     fontSize: 13),
                               ),
                               if (med.isTaken)
@@ -658,6 +719,41 @@ class _HomePageState extends State<HomePage> {
                                         fontWeight: FontWeight.bold),
                                   ),
                                 ),
+                            ],
+                          ),
+                          trailing: PopupMenuButton<String>(
+                            onSelected: (v) async {
+                              if (usuarioSelecionado == null) return;
+                              if (v == 'copy_one') {
+                                final texto = _montarResumoMedicamentos(
+                                  perfil: usuarioSelecionado!,
+                                  meds: [med],
+                                  dia: med.scheduledDateTime,
+                                );
+                                await Clipboard.setData(
+                                    ClipboardData(text: texto));
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Texto copiado')),
+                                );
+                              } else if (v == 'share_one') {
+                                final texto = _montarResumoMedicamentos(
+                                  perfil: usuarioSelecionado!,
+                                  meds: [med],
+                                  dia: med.scheduledDateTime,
+                                );
+                                await Share.share(texto);
+                              }
+                            },
+                            itemBuilder: (context) => const [
+                              PopupMenuItem(
+                                value: 'copy_one',
+                                child: Text('Copiar'),
+                              ),
+                              PopupMenuItem(
+                                value: 'share_one',
+                                child: Text('Compartilhar'),
+                              ),
                             ],
                           ),
                           onTap: () => _showMedicamentoActions(med, index),

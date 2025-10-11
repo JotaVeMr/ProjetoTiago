@@ -5,9 +5,7 @@ import 'package:local_auth/local_auth.dart';
 
 import '../models/usuario.dart';
 import '../services/database_helper.dart';
-import '../main.dart' as app; // ✅ adicionado para voltar ao MyApp após criar perfil
-
-
+import '../main.dart' as app; // ✅ usado para voltar ao MyApp após criar perfil
 
 class ConfigurarPerfilPage extends StatefulWidget {
   const ConfigurarPerfilPage({super.key});
@@ -64,11 +62,17 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
       _sobrenomeCtrl.clear();
       setState(() => _sexo = Sexo.outro);
 
-      // ✅ Corrigido: volta para o app completo (MyApp) com abas
+      // ✅ Corrigido: mantém o tema atual salvo no SharedPreferences
+      final isDarkTheme = prefs.getBool('isDarkTheme') ?? false;
+
+      // ✅ Volta para o app completo (MyApp) com o tema preservado
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(
-          builder: (context) => const app.MyApp(onboardingDone: true,isDarkTheme: false,),
+          builder: (context) => app.MyApp(
+            onboardingDone: true,
+            isDarkTheme: isDarkTheme,
+          ),
         ),
         (route) => false,
       );

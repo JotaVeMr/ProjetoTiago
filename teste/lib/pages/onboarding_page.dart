@@ -21,7 +21,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       'title': 'Bem-vindo ao PharmSync!',
       'subtitle':
           'Seu assistente para controle de medicamentos. Organize seus horários e mantenha seus tratamentos em dia.',
-      'image': 'assets/images/medicina.png',
+      'image': 'assets/images/iconeSemFundo.png',
     },
     {
       'title': 'Acompanhe seus medicamentos',
@@ -33,7 +33,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       'title': 'Perfis personalizados',
       'subtitle':
           'Gerencie múltiplos usuários — ideal para famílias ou cuidadores.',
-      'image': 'assets/images/perfil.png',
+      'image': 'assets/images/ConfigPerfil.png',
     },
   ];
 
