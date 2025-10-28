@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter/services.dart';
-
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../models/medicamento.dart';
 import '../models/usuario.dart';
 import '../services/notification_service.dart';
@@ -33,11 +33,31 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _selectedDay = _focusedDay;
+    _requestNotificationPermission();
+    
 
     // Ouve alterações globais (ex.: exclusão/edição/adição na aba Medicamentos ou perfis)
     AppEventBus.I.medicamentosChanged.addListener(_loadMedicamentos);
     _loadUsuarioSelecionado();
   }
+  Future<void> _requestNotificationPermission() async {
+  final plugin = FlutterLocalNotificationsPlugin();
+
+  // Android
+ final android =
+    plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+
+    await android?.requestNotificationsPermission();
+
+  // iOS
+  final ios =
+      plugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
+  await ios?.requestPermissions(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+}
 
   @override
   void dispose() {
@@ -64,6 +84,16 @@ class _HomePageState extends State<HomePage> {
       });
     }
   }
+//   void _testarNotificacaoAgora() async {
+//   final agora = DateTime.now().add(const Duration(seconds: 10));
+//   await NotificationService().scheduleNotification(
+//     999, // id fictício
+//     "Teste imediato",
+//     "Notificação de teste enviada com sucesso!",
+//     agora,
+//   );
+//     print("🧩 Notificação de teste agendada para ${agora.toIso8601String()}");
+// }
 
   /// Carrega medicamentos do DB e SharedPreferences (por usuário)
   Future<void> _loadMedicamentos() async {
@@ -762,8 +792,11 @@ class _HomePageState extends State<HomePage> {
                     },
                   ),
           ),
+          
         ],
       ),
+      
+      
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _navigateToAddMedicamentoPage,
         label: const Text("Adicionar Medicamento",
@@ -773,6 +806,9 @@ class _HomePageState extends State<HomePage> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30.0)),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+        
+
+      
     );
   }
 }

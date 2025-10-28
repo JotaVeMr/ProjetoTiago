@@ -101,6 +101,27 @@ class _AddMedicamentoPageState extends State<AddMedicamentoPage> {
       horarioSelecionado.minute,
     );
 
+    // ✅ NOVA ETAPA: Escolher tipo de notificação
+    String? tipoNotificacao = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return SimpleDialog(
+          title: const Text('Escolha o tipo de notificação'),
+          children: [
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, 'nao_notificar'),
+              child: const Text('Não notificar'),
+            ),
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, 'no_horario'),
+              child: const Text('No horário'),
+            ),
+          
+          ],
+        );
+      },
+    );
+
     final med = Medicamento(
       id: widget.medicamento?.id ?? DateTime.now().millisecondsSinceEpoch,
       nome: nomeController.text,
@@ -112,7 +133,7 @@ class _AddMedicamentoPageState extends State<AddMedicamentoPage> {
       isTaken: widget.medicamento?.isTaken ?? false,
       isIgnored: widget.medicamento?.isIgnored ?? false,
       isPendente: widget.medicamento?.isPendente ?? false,
-      usuarioId: _usuarioSelecionado!.id, // VÍNCULO AQUI
+      usuarioId: _usuarioSelecionado!.id,
     );
 
     // SQLite
@@ -146,13 +167,22 @@ class _AddMedicamentoPageState extends State<AddMedicamentoPage> {
       listaAtualizada.map((e) => jsonEncode(e.toJson())).toList(),
     );
 
-    // Notificação
-    NotificationService().scheduleNotification(
-      med.id!,
-      "Hora do medicamento",
-      "É hora de tomar ${med.nome} - ${med.dose}",
-      fullDateTime,
-    );
+    // ✅ NOVO BLOCO DE NOTIFICAÇÃO
+    if (tipoNotificacao != null && tipoNotificacao != 'nao_notificar') {
+      DateTime horarioNotificacao = fullDateTime;
+      if (tipoNotificacao == 'adiantado') {
+        horarioNotificacao = horarioNotificacao.subtract(const Duration(minutes: 10));
+      } else if (tipoNotificacao == 'atrasado') {
+        horarioNotificacao = horarioNotificacao.add(const Duration(minutes: 10));
+      }
+
+        NotificationService().scheduleNotification(
+          med.id! % 1000000000, // 🔹 Garante que o ID caiba no limite de 32 bits
+          "Hora do medicamento",
+          "É hora de tomar ${med.nome} - ${med.dose}",
+          fullDateTime,
+        );
+    }
 
     if (mounted) Navigator.pop(context, true);
   }
