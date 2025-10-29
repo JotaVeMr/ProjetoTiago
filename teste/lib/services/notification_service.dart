@@ -62,9 +62,9 @@ class NotificationService {
     if (Platform.isAndroid) {
       final status = await Permission.notification.request();
       if (status.isGranted) {
-        print("✅ Permissão de notificação concedida!");
+        print(" Permissão de notificação concedida!");
       } else {
-        print("⚠️ Permissão de notificação negada!");
+        print(" Permissão de notificação negada!");
       }
     } else if (Platform.isIOS) {
       await flutterLocalNotificationsPlugin
@@ -82,9 +82,9 @@ class NotificationService {
         if (sdkInt >= 31) {
           final status = await Permission.scheduleExactAlarm.request();
           if (status.isGranted) {
-            print("✅ Permissão de alarme exato concedida!");
+            print(" Permissão de alarme exato concedida!");
           } else {
-            print("⚠️ Permissão de alarme exato negada!");
+            print(" Permissão de alarme exato negada!");
           }
         }
       } catch (e) {
