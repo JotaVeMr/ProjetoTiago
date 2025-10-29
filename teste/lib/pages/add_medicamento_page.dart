@@ -101,7 +101,7 @@ class _AddMedicamentoPageState extends State<AddMedicamentoPage> {
       horarioSelecionado.minute,
     );
 
-    // ✅ NOVA ETAPA: Escolher tipo de notificação
+    //Escolher tipo de notificação
     String? tipoNotificacao = await showDialog<String>(
       context: context,
       builder: (context) {
@@ -167,7 +167,7 @@ class _AddMedicamentoPageState extends State<AddMedicamentoPage> {
       listaAtualizada.map((e) => jsonEncode(e.toJson())).toList(),
     );
 
-    // ✅ NOVO BLOCO DE NOTIFICAÇÃO
+    
     if (tipoNotificacao != null && tipoNotificacao != 'nao_notificar') {
       DateTime horarioNotificacao = fullDateTime;
       if (tipoNotificacao == 'adiantado') {
@@ -177,7 +177,7 @@ class _AddMedicamentoPageState extends State<AddMedicamentoPage> {
       }
 
         NotificationService().scheduleNotification(
-          med.id! % 1000000000, // 🔹 Garante que o ID caiba no limite de 32 bits
+          med.id! % 1000000000, 
           "Hora do medicamento",
           "É hora de tomar ${med.nome} - ${med.dose}",
           fullDateTime,
