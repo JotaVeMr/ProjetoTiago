@@ -26,7 +26,7 @@ class ConfiguracoesPage extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           const SizedBox(height: 8),
-          // 🔧 Seção de personalização
+          //  Seção de personalização
           _buildSectionTitle('Personalização', theme),
           Card(
             elevation: 2,
@@ -52,7 +52,7 @@ class ConfiguracoesPage extends StatelessWidget {
           const Divider(),
           const SizedBox(height: 20),
 
-          // 💊 Seção sobre o aplicativo
+          //  Seção sobre o aplicativo
           _buildSectionTitle('Sobre o aplicativo', theme),
           Card(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -78,7 +78,7 @@ class ConfiguracoesPage extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          // 💡 Novo card: Dicas de uso
+          //  Novo card: Dicas de uso
           Card(
             elevation: 2,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -94,7 +94,7 @@ class ConfiguracoesPage extends StatelessWidget {
 
           const SizedBox(height: 32),
 
-          // ❤️ Assinatura visual
+          //  Assinatura visual
           Center(
             child: Text(
               'PharmSync • Cuidando da sua rotina 💊',
