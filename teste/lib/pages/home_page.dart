@@ -36,7 +36,7 @@ class _HomePageState extends State<HomePage> {
     _requestNotificationPermission();
     
 
-    // Ouve alterações globais (ex.: exclusão/edição/adição na aba Medicamentos ou perfis)
+    
     AppEventBus.I.medicamentosChanged.addListener(_loadMedicamentos);
     _loadUsuarioSelecionado();
   }
@@ -72,12 +72,12 @@ class _HomePageState extends State<HomePage> {
 
     if (usuarioJson != null) {
       setState(() {
-        // usamos toMap() na hora de salvar => aqui usamos fromMap
+        
         usuarioSelecionado = Usuario.fromMap(jsonDecode(usuarioJson));
       });
       await _loadMedicamentos();
     } else {
-      // sem usuário selecionado, não forçamos navegação. Mostra "Perfil" no topo.
+      
       setState(() {
         usuarioSelecionado = null;
         medicamentos = [];
@@ -92,7 +92,7 @@ class _HomePageState extends State<HomePage> {
 //     "Notificação de teste enviada com sucesso!",
 //     agora,
 //   );
-//     print("🧩 Notificação de teste agendada para ${agora.toIso8601String()}");
+//     print(" Notificação de teste agendada para ${agora.toIso8601String()}");
 // }
 
   /// Carrega medicamentos do DB e SharedPreferences (por usuário)
