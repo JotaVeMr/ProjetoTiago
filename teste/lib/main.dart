@@ -23,11 +23,11 @@ void main() async {
   tz.setLocalLocation(tz.getLocation('America/Sao_Paulo'));
   await NotificationService().init();
 
-  // 🔹 Verifica se é a primeira inicialização
+  //  Verifica se é a primeira inicialização
   final prefs = await SharedPreferences.getInstance();
   final onboardingDone = prefs.getBool('onboarding_completed') ?? false;
 
-  // 🔹 Carrega o tema salvo (true = escuro, false = claro)
+  //  Carrega o tema salvo (true = escuro, false = claro)
   final isDarkTheme = prefs.getBool('isDarkTheme') ?? false;
 
   runApp(MyApp(
@@ -70,7 +70,7 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ Agora criamos as páginas *aqui*, com o tema já definido
+    
     final List<Widget> pages = [
       const HomePage(),
       TratamentosPage(),
@@ -83,7 +83,7 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
 
-      // 🌎 Localização configurada
+      //  Localização configurada
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -92,12 +92,12 @@ class _MyAppState extends State<MyApp> {
       supportedLocales: const [Locale('pt', 'BR')],
       locale: const Locale('pt', 'BR'),
 
-      // 🎨 Suporte a tema claro/escuro
+      //  Suporte a tema claro/escuro
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
       themeMode: _isDarkTheme ? ThemeMode.dark : ThemeMode.light,
 
-      // 👇 Verifica se deve abrir Onboarding ou App normal
+      //  Verifica se deve abrir Onboarding ou App normal
       home: widget.onboardingDone
           ? Scaffold(
               body: pages[_selectedIndex],
