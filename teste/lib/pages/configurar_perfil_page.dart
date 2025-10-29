@@ -5,7 +5,7 @@ import 'package:local_auth/local_auth.dart';
 
 import '../models/usuario.dart';
 import '../services/database_helper.dart';
-import '../main.dart' as app; // ✅ usado para voltar ao MyApp após criar perfil
+import '../main.dart' as app; //  usado para voltar ao MyApp após criar perfil
 
 class ConfigurarPerfilPage extends StatefulWidget {
   const ConfigurarPerfilPage({super.key});
@@ -41,7 +41,7 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
       nome: _nomeCtrl.text.trim(),
       sobrenome: _sobrenomeCtrl.text.trim(),
       sexo: _sexo,
-      pin: '', // não usamos mais PIN manual
+      pin: '', 
       id: null,
     );
 
@@ -62,10 +62,10 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
       _sobrenomeCtrl.clear();
       setState(() => _sexo = Sexo.outro);
 
-      // ✅ Corrigido: mantém o tema atual salvo no SharedPreferences
+      
       final isDarkTheme = prefs.getBool('isDarkTheme') ?? false;
 
-      // ✅ Volta para o app completo (MyApp) com o tema preservado
+      
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(
@@ -86,7 +86,7 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
     Navigator.pop(context, true);
   }
 
-  /// 🔒 Autenticação local antes da remoção (PIN/senha/padrão)
+  
   Future<bool> _autenticarLocalmente() async {
     try {
       final isSupported = await _localAuth.isDeviceSupported();
