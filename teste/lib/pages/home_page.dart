@@ -34,12 +34,19 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _selectedDay = _focusedDay;
     _requestNotificationPermission();
+     _init();
+    
     
 
     // Ouve alterações globais (ex.: exclusão/edição/adição na aba Medicamentos ou perfis)
     AppEventBus.I.medicamentosChanged.addListener(_loadMedicamentos);
     _loadUsuarioSelecionado();
   }
+
+      Future<void> _init() async {
+      await DatabaseHelper.instance.marcarPendentesComoNaoTomados();
+      await _loadMedicamentos();
+    }
   Future<void> _requestNotificationPermission() async {
   final plugin = FlutterLocalNotificationsPlugin();
 
@@ -105,10 +112,25 @@ class _HomePageState extends State<HomePage> {
     }
 
     final prefs = await SharedPreferences.getInstance();
-    final data =
-        prefs.getStringList('medicamentos_${usuarioSelecionado!.id}') ?? [];
+    final data = prefs.getStringList('medicamentos_${usuarioSelecionado!.id}') ?? [];
     List<Medicamento> prefsList =
-        data.map((e) => Medicamento.fromJson(jsonDecode(e))).toList();
+    data.map((e) => Medicamento.fromJson(jsonDecode(e))).toList();
+
+    final agora = DateTime.now();
+      for (var med in prefsList) {
+        if (med.dataHoraAgendamento != null) {
+          final dataAgendada = DateTime.parse(med.dataHoraAgendamento!);
+          if (dataAgendada.isBefore(agora) &&
+              med.isTaken == false &&
+              med.isIgnored == false) {
+            med.isPendente = true;
+            await DatabaseHelper.instance.updateMedicamento(med);
+          }
+        }
+      }
+
+// ✅ Marca automaticamente como NÃO TOMADOS no banco (para o gráfico)
+        //await DatabaseHelper.instance.marcarPendentesComoNaoTomados();
 
     // busca do SQLite filtrando por usuarioId
     List<Medicamento> dbList = await DatabaseHelper.instance
@@ -135,6 +157,8 @@ class _HomePageState extends State<HomePage> {
         await DatabaseHelper.instance.updateMedicamento(med);
       }
     }
+  await DatabaseHelper.instance.marcarPendentesComoNaoTomados();
+
 
     setState(() {
       medicamentos = mapa.values.toList();
@@ -389,139 +413,158 @@ class _HomePageState extends State<HomePage> {
 
                 // TOMAR AGORA
                 SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      setState(() {
-                        medicamento.isTaken = true;
-                        medicamento.isIgnored = false;
-                        medicamento.isPendente = false;
-                      });
-                      await DatabaseHelper.instance.updateMedicamento(medicamento);
-                      await _saveMedicamentosLocalOnly();
-                      if (!mounted) return;
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content:
-                              Text('${medicamento.nome} marcado como tomado!'),
-                        ),
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    setState(() {
+                      medicamento.isTaken = true;
+                      medicamento.isIgnored = false;
+                      medicamento.isPendente = false;
+                    });
+
+                    await DatabaseHelper.instance.updateMedicamento(medicamento);
+
+                    // ✅ registra dose no histórico
+                   if (medicamento.id != null) {
+                    print("🔎 registrando dose para ${medicamento.nome} (id: ${medicamento.id})");
+
+                    try {
+                      await DatabaseHelper.instance.registrarDose(
+                        medicamentoId: medicamento.id!,
+                        status: 'Tomado',
                       );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                    ),
-                    child: const Text("Tomar agora",
-                        style: TextStyle(fontSize: 18)),
+                      print("✅ dose registrada no banco!");
+                    } catch (e) {
+                      print("❌ erro ao registrar dose: $e");
+                    }
+                  }
+                    await _saveMedicamentosLocalOnly();
+                    if (!mounted) return;
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${medicamento.nome} marcado como tomado!'),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
+                  child: const Text("Tomar agora", style: TextStyle(fontSize: 18)),
                 ),
-                const SizedBox(height: 10),
+              ),
+              const SizedBox(height: 10),
 
                 // REAGENDAR
                 SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      Navigator.pop(context);
-                      final DateTime? newDate = await showDatePicker(
-                        context: context,
-                        initialDate: medicamento.scheduledDateTime,
-                        firstDate: DateTime.now(),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                      );
-                      if (newDate == null) return;
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    final DateTime? newDate = await showDatePicker(
+                      context: context,
+                      initialDate: medicamento.scheduledDateTime,
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (newDate == null) return;
 
-                      final TimeOfDay? newTime = await showTimePicker(
-                        context: context,
-                        initialTime: medicamento.scheduledTimeOfDay,
-                      );
-                      if (newTime == null) return;
+                    final TimeOfDay? newTime = await showTimePicker(
+                      context: context,
+                      initialTime: medicamento.scheduledTimeOfDay,
+                    );
+                    if (newTime == null) return;
 
-                      final DateTime newScheduledDateTime = DateTime(
-                        newDate.year,
-                        newDate.month,
-                        newDate.day,
-                        newTime.hour,
-                        newTime.minute,
-                      );
+                    final DateTime newScheduledDateTime = DateTime(
+                      newDate.year,
+                      newDate.month,
+                      newDate.day,
+                      newTime.hour,
+                      newTime.minute,
+                    );
 
-                      setState(() {
-                        medicamento.dataHoraAgendamento =
-                            newScheduledDateTime.toIso8601String();
-                        medicamento.isTaken = false;
-                        medicamento.isIgnored = false;
-                        medicamento.isPendente = false;
-                      });
+                    setState(() {
+                      medicamento.dataHoraAgendamento =
+                          newScheduledDateTime.toIso8601String();
+                      medicamento.isTaken = false;
+                      medicamento.isIgnored = false;
+                      medicamento.isPendente = false;
+                    });
 
-                      await DatabaseHelper.instance.updateMedicamento(medicamento);
-                      await _saveMedicamentosLocalOnly();
+                    await DatabaseHelper.instance.updateMedicamento(medicamento);
+                    await _saveMedicamentosLocalOnly();
 
-                      NotificationService().scheduleNotification(
-                        medicamento.id ??
-                            newScheduledDateTime.millisecondsSinceEpoch % 100000,
-                        "Hora do medicamento",
-                        "É hora de tomar ${medicamento.nome} - ${medicamento.dose}",
-                        newScheduledDateTime,
-                      );
+                    NotificationService().scheduleNotification(
+                      medicamento.id ??
+                          newScheduledDateTime.millisecondsSinceEpoch % 100000,
+                      "Hora do medicamento",
+                      "É hora de tomar ${medicamento.nome} - ${medicamento.dose}",
+                      newScheduledDateTime,
+                    );
 
-                      await _loadMedicamentos();
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            '${medicamento.nome} reagendado para ${TimeOfDay(hour: newScheduledDateTime.hour, minute: newScheduledDateTime.minute).format(context)}',
-                          ),
+                    await _loadMedicamentos();
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          '${medicamento.nome} reagendado para ${TimeOfDay(hour: newScheduledDateTime.hour, minute: newScheduledDateTime.minute).format(context)}',
                         ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                    ),
-                    child:
-                        const Text("Reagendar", style: TextStyle(fontSize: 18)),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
+                  child: const Text("Reagendar", style: TextStyle(fontSize: 18)),
                 ),
-                const SizedBox(height: 10),
+              ),
+              const SizedBox(height: 10),
 
                 // ESQUECIDO
                 SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () async {
-                      setState(() {
-                        medicamento.isTaken = false;
-                        medicamento.isIgnored = true;
-                        medicamento.isPendente = false;
-                      });
-                      await DatabaseHelper.instance.updateMedicamento(medicamento);
-                      await _saveMedicamentosLocalOnly();
-                      if (!mounted) return;
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('${medicamento.nome} marcado como esquecido.'),
-                        ),
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () async {
+                    setState(() {
+                      medicamento.isTaken = false;
+                      medicamento.isIgnored = true;
+                      medicamento.isPendente = false;
+                    });
+
+                    await DatabaseHelper.instance.updateMedicamento(medicamento);
+
+                    // ✅ registra dose no histórico
+                    if (medicamento.id != null) {
+                      await DatabaseHelper.instance.registrarDose(
+                        medicamentoId: medicamento.id!,
+                        status: 'Esquecido',
                       );
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.orange,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                      side: const BorderSide(color: Colors.orange),
-                    ),
-                    child:
-                        const Text("Esquecido", style: TextStyle(fontSize: 18)),
+                    }
+
+                    await _saveMedicamentosLocalOnly();
+                    if (!mounted) return;
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${medicamento.nome} marcado como esquecido.'),
+                      ),
+                    );
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.orange,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    side: const BorderSide(color: Colors.orange),
                   ),
+                  child: const Text("Esquecido", style: TextStyle(fontSize: 18)),
                 ),
+              ),
                 const SizedBox(height: 10),
 
                 // CANCELAR

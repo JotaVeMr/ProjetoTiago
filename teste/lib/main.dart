@@ -7,7 +7,7 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-
+import 'pages/relatorio_page.dart';
 import 'pages/home_page.dart';
 import 'pages/tratamentos_page.dart';
 import 'pages/onboarding_page.dart';
@@ -23,11 +23,11 @@ void main() async {
   tz.setLocalLocation(tz.getLocation('America/Sao_Paulo'));
   await NotificationService().init();
 
-  // 🔹 Verifica se é a primeira inicialização
+  //  Verifica se é a primeira inicialização
   final prefs = await SharedPreferences.getInstance();
   final onboardingDone = prefs.getBool('onboarding_completed') ?? false;
 
-  // 🔹 Carrega o tema salvo (true = escuro, false = claro)
+  //  Carrega o tema salvo (true = escuro, false = claro)
   final isDarkTheme = prefs.getBool('isDarkTheme') ?? false;
 
   runApp(MyApp(
@@ -70,20 +70,22 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ Agora criamos as páginas *aqui*, com o tema já definido
+    //  Agora criamos as páginas *aqui*, com o tema já definido
     final List<Widget> pages = [
       const HomePage(),
       TratamentosPage(),
+      RelatorioPage(),
       ConfiguracoesPage(
         isDarkTheme: _isDarkTheme,
         onThemeChanged: _onThemeChanged,
       ),
+      
     ];
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
 
-      // 🌎 Localização configurada
+      //  Localização configurada
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -114,7 +116,10 @@ class _MyAppState extends State<MyApp> {
                   BottomNavigationBarItem(
                       icon: Icon(Icons.medication), label: "Medicamentos"),
                   BottomNavigationBarItem(
+                      icon: Icon(Icons.bar_chart_outlined), label: "Relatórios"),
+                  BottomNavigationBarItem(
                       icon: Icon(Icons.settings), label: "Configurações"),
+                  
                 ],
               ),
             )

@@ -21,9 +21,8 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 6,
       onConfigure: (db) async {
-        // importante p/ ON DELETE CASCADE funcionar
         await db.execute('PRAGMA foreign_keys = ON');
       },
       onCreate: _createDB,
@@ -32,7 +31,7 @@ class DatabaseHelper {
   }
 
   Future _createDB(Database db, int version) async {
-    // Usuários
+    // ====== USUÁRIOS ======
     await db.execute('''
       CREATE TABLE usuarios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,10 +42,10 @@ class DatabaseHelper {
       )
     ''');
 
-    // Medicamentos
+    // ====== MEDICAMENTOS ======
     await db.execute('''
       CREATE TABLE medicamentos (
-        id INTEGER PRIMARY KEY,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
         usuarioId INTEGER,
         nome TEXT NOT NULL,
         tipo TEXT,
@@ -61,7 +60,7 @@ class DatabaseHelper {
       )
     ''');
 
-    // Tratamentos (mantido se você usa)
+    // ====== TRATAMENTOS ======
     await db.execute('''
       CREATE TABLE tratamentos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -72,42 +71,38 @@ class DatabaseHelper {
         FOREIGN KEY (medicamentoId) REFERENCES medicamentos(id) ON DELETE CASCADE
       )
     ''');
+
+    // ====== DOSES CONFIRMADAS ======
+    await db.execute('''
+      CREATE TABLE dose_confirmada (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        medicamentoId INTEGER,
+        usuarioId INTEGER,
+        horarioConfirmacao TEXT,
+        status TEXT,
+        FOREIGN KEY (medicamentoId) REFERENCES medicamentos(id) ON DELETE CASCADE,
+        FOREIGN KEY (usuarioId) REFERENCES usuarios(id) ON DELETE CASCADE
+      )
+    ''');
   }
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
-    // v2: adicionou dataInicio/dataFim em medicamentos
-    if (oldVersion < 2) {
-      await db.execute("ALTER TABLE medicamentos ADD COLUMN dataInicio TEXT");
-      await db.execute("ALTER TABLE medicamentos ADD COLUMN dataFim TEXT");
-    }
-    // v3: criou usuarios e coluna usuarioId + campos novos de usuario
-    if (oldVersion < 3) {
-      await db.execute('PRAGMA foreign_keys = OFF');
-
+    if (oldVersion < 6) {
       await db.execute('''
-        CREATE TABLE IF NOT EXISTS usuarios (
+        CREATE TABLE IF NOT EXISTS dose_confirmada (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          nome TEXT NOT NULL,
-          sobrenome TEXT DEFAULT '',
-          sexo TEXT DEFAULT 'outro',
-          pin TEXT DEFAULT ''
+          medicamentoId INTEGER,
+          usuarioId INTEGER,
+          horarioConfirmacao TEXT,
+          status TEXT,
+          FOREIGN KEY (medicamentoId) REFERENCES medicamentos(id) ON DELETE CASCADE,
+          FOREIGN KEY (usuarioId) REFERENCES usuarios(id) ON DELETE CASCADE
         )
       ''');
-
-      final cols = await db.rawQuery(
-          "PRAGMA table_info(medicamentos)"); // vê se já existe usuarioId
-      final hasUsuarioId =
-          cols.any((c) => (c['name'] as String?)?.toLowerCase() == 'usuarioid');
-      if (!hasUsuarioId) {
-        await db.execute(
-            "ALTER TABLE medicamentos ADD COLUMN usuarioId INTEGER REFERENCES usuarios(id)");
-      }
-
-      await db.execute('PRAGMA foreign_keys = ON');
     }
   }
 
-  // ------------------ USUÁRIOS ------------------
+  // ================= USUÁRIOS =================
   Future<int> insertUsuario(Usuario usuario) async {
     final db = await database;
     return await db.insert(
@@ -144,18 +139,19 @@ class DatabaseHelper {
 
   Future<int> deleteUsuario(int id) async {
     final db = await database;
-    // ON DELETE CASCADE apagará medicamentos vinculados
     return await db.delete('usuarios', where: 'id = ?', whereArgs: [id]);
   }
 
-  // ---------------- MEDICAMENTOS ----------------
+  // ================= MEDICAMENTOS =================
   Future<int> insertMedicamento(Medicamento med) async {
     final db = await database;
-    return await db.insert(
+    final id = await db.insert(
       'medicamentos',
       med.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    med.id = id;
+    return id;
   }
 
   Future<int> updateMedicamento(Medicamento med) async {
@@ -185,13 +181,7 @@ class DatabaseHelper {
     return maps.map((m) => Medicamento.fromMap(m)).toList();
   }
 
-  Future<int> deleteAllMedicamentosByUsuario(int usuarioId) async {
-    final db = await database;
-    return await db
-        .delete('medicamentos', where: 'usuarioId = ?', whereArgs: [usuarioId]);
-  }
-
-  // --------------- TRATAMENTOS (opcional) ---------------
+  // ================= TRATAMENTOS =================
   Future<int> insertTratamento(Map<String, dynamic> t) async {
     final db = await database;
     return await db.insert('tratamentos', t,
@@ -206,6 +196,118 @@ class DatabaseHelper {
   Future<int> deleteTratamento(int id) async {
     final db = await database;
     return await db.delete('tratamentos', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // ================= DOSES CONFIRMADAS =================
+  Future<void> registrarDose({
+  required int medicamentoId,
+  required String status,
+}) async {
+  final db = await database;
+  final med = await db.query(
+    'medicamentos',
+    columns: ['usuarioId'],
+    where: 'id = ?',
+    whereArgs: [medicamentoId],
+  );
+  final usuarioId = med.isNotEmpty ? (med.first['usuarioId'] as int?) ?? 0 : 0;
+
+  // 🔎 Verifica se já existe um registro recente para este medicamento
+  final jaExiste = await db.query(
+    'dose_confirmada',
+    where:
+        'medicamentoId = ? AND DATE(horarioConfirmacao) = DATE("now")',
+    whereArgs: [medicamentoId],
+  );
+
+  if (jaExiste.isEmpty) {
+    // ✅ Só insere se ainda não houver registro do dia
+    await db.insert('dose_confirmada', {
+      'medicamentoId': medicamentoId,
+      'usuarioId': usuarioId,
+      'horarioConfirmacao': DateTime.now().toIso8601String(),
+      'status': status,
+    });
+  } else {
+    // 🔄 Atualiza o status caso o usuário tenha alterado (sem duplicar)
+    await db.update(
+      'dose_confirmada',
+      {
+        'status': status,
+        'horarioConfirmacao': DateTime.now().toIso8601String(),
+      },
+      where:
+          'medicamentoId = ? AND DATE(horarioConfirmacao) = DATE("now")',
+      whereArgs: [medicamentoId],
+    );
+  }
+}
+
+
+  Future<List<Map<String, dynamic>>> getDosesConfirmadas(
+      {int? usuarioId}) async {
+    final db = await database;
+    final result = await db.rawQuery('''
+      SELECT D.id, D.horarioConfirmacao, D.status, M.nome AS medicamento
+      FROM dose_confirmada D
+      JOIN medicamentos M ON D.medicamentoId = M.id
+      ${usuarioId != null ? 'WHERE D.usuarioId = ?' : ''}
+      ORDER BY D.horarioConfirmacao DESC
+    ''', usuarioId != null ? [usuarioId] : []);
+    return result;
+  }
+
+  // ================= NOVO MÉTODO =================
+  Future<void> marcarPendentesComoNaoTomados() async {
+  final db = await database;
+  final agora = DateTime.now().toIso8601String();
+
+  // Busca medicamentos que já passaram do horário e ainda não foram marcados
+  final pendentes = await db.query(
+    'medicamentos',
+    where:
+        'dataHoraAgendamento < ? AND isTaken = 0 AND isIgnored = 0',
+    whereArgs: [agora],
+  );
+
+  for (var med in pendentes) {
+    final usuarioId = med['usuarioId'] ?? 0;
+
+    // Marca o medicamento como pendente
+    await db.update(
+      'medicamentos',
+      {'isPendente': 1},
+      where: 'id = ?',
+      whereArgs: [med['id']],
+    );
+
+    // Verifica se já existe um registro em dose_confirmada
+    final existe = await db.query(
+      'dose_confirmada',
+      where: 'medicamentoId = ? AND status = ?',
+      whereArgs: [med['id'], 'NÃO TOMADO'],
+      limit: 1,
+    );
+
+    if (existe.isEmpty) {
+      // Insere um novo registro de dose não tomada
+      await db.insert('dose_confirmada', {
+        'medicamentoId': med['id'],
+        'usuarioId': usuarioId,
+        'horarioConfirmacao': agora,
+        'status': 'NÃO TOMADO',
+      });
+    }
+  }
+}
+
+
+  // ================= DEBUG / FECHAR =================
+  Future<void> debugListTables() async {
+    final db = await database;
+    final tables = await db
+        .rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
+    print("🧩 Tabelas encontradas no banco: $tables");
   }
 
   Future close() async {
