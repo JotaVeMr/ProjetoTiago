@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../services/database_helper.dart';
 
 class ConfiguracoesPage extends StatelessWidget {
   final bool isDarkTheme;
@@ -26,6 +28,7 @@ class ConfiguracoesPage extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           const SizedBox(height: 8),
+
           // 🔧 Seção de personalização
           _buildSectionTitle('Personalização', theme),
           Card(
@@ -48,6 +51,7 @@ class ConfiguracoesPage extends StatelessWidget {
               onChanged: (value) => onThemeChanged(value),
             ),
           ),
+
           const SizedBox(height: 20),
           const Divider(),
           const SizedBox(height: 20),
@@ -78,7 +82,7 @@ class ConfiguracoesPage extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          // 💡 Novo card: Dicas de uso
+          // 💡 Dicas de uso
           Card(
             elevation: 2,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -89,6 +93,27 @@ class ConfiguracoesPage extends StatelessWidget {
                 'Mantenha seus lembretes sempre atualizados e revise as datas '
                 'dos tratamentos periodicamente para evitar esquecimentos.',
               ),
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // ⚠️ Reinicializar aplicativo
+          _buildSectionTitle('Gerenciamento', theme),
+          Card(
+            color: Colors.red.shade50,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            elevation: 2,
+            child: ListTile(
+              leading: const Icon(Icons.restart_alt, color: Colors.redAccent),
+              title: const Text(
+                'Reinicializar aplicativo',
+                style: TextStyle(fontWeight: FontWeight.w600, color: Colors.red),
+              ),
+              subtitle: const Text(
+                'Apaga todos os dados e volta às configurações iniciais.',
+              ),
+              onTap: () => _confirmarReinicio(context),
             ),
           ),
 
@@ -121,5 +146,47 @@ class ConfiguracoesPage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _confirmarReinicio(BuildContext context) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reinicializar aplicativo'),
+        content: const Text(
+          'Tem certeza de que deseja apagar todos os dados e voltar às configurações iniciais?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            //style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    final db = DatabaseHelper.instance;
+    await db.resetDatabase();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Aplicativo reiniciado com sucesso!'),
+        duration: Duration(seconds: 3),
+      ),
+    );
+
+    Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
   }
 }

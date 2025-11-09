@@ -315,4 +315,18 @@ class DatabaseHelper {
     await db.close();
     _database = null;
   }
+
+  // Reinicialização do app
+Future<void> resetDatabase() async {
+  final db = await database; // usa o getter já definido lá em cima
+
+  // Apaga os dados das tabelas
+  await db.delete('dose_confirmada');
+  await db.delete('tratamentos');
+  await db.delete('medicamentos');
+  await db.delete('usuarios');
+
+  print("🧹 Todas as tabelas foram limpas com sucesso!");
 }
+}
+

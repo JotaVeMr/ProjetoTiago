@@ -14,6 +14,8 @@ import 'pages/onboarding_page.dart';
 import 'pages/configuracoes_page.dart';
 import 'services/notification_service.dart';
 
+
+
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
@@ -67,6 +69,7 @@ class _MyAppState extends State<MyApp> {
     await prefs.setBool('isDarkTheme', value);
     setState(() => _isDarkTheme = value);
   }
+  
 
   @override
   Widget build(BuildContext context) {
@@ -84,6 +87,8 @@ class _MyAppState extends State<MyApp> {
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+
+      
 
       //  Localização configurada
       localizationsDelegates: const [
