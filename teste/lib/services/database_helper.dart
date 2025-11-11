@@ -1,5 +1,9 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/medicamento.dart';
 import '../models/usuario.dart';
 
@@ -21,7 +25,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 6,
+      version: 7,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -87,7 +91,7 @@ class DatabaseHelper {
   }
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 6) {
+    if (oldVersion < 7) {
       await db.execute('''
         CREATE TABLE IF NOT EXISTS dose_confirmada (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -200,49 +204,44 @@ class DatabaseHelper {
 
   // ================= DOSES CONFIRMADAS =================
   Future<void> registrarDose({
-  required int medicamentoId,
-  required String status,
-}) async {
-  final db = await database;
-  final med = await db.query(
-    'medicamentos',
-    columns: ['usuarioId'],
-    where: 'id = ?',
-    whereArgs: [medicamentoId],
-  );
-  final usuarioId = med.isNotEmpty ? (med.first['usuarioId'] as int?) ?? 0 : 0;
-
-  // 🔎 Verifica se já existe um registro recente para este medicamento
-  final jaExiste = await db.query(
-    'dose_confirmada',
-    where:
-        'medicamentoId = ? AND DATE(horarioConfirmacao) = DATE("now")',
-    whereArgs: [medicamentoId],
-  );
-
-  if (jaExiste.isEmpty) {
-    // ✅ Só insere se ainda não houver registro do dia
-    await db.insert('dose_confirmada', {
-      'medicamentoId': medicamentoId,
-      'usuarioId': usuarioId,
-      'horarioConfirmacao': DateTime.now().toIso8601String(),
-      'status': status,
-    });
-  } else {
-    // 🔄 Atualiza o status caso o usuário tenha alterado (sem duplicar)
-    await db.update(
-      'dose_confirmada',
-      {
-        'status': status,
-        'horarioConfirmacao': DateTime.now().toIso8601String(),
-      },
-      where:
-          'medicamentoId = ? AND DATE(horarioConfirmacao) = DATE("now")',
+    required int medicamentoId,
+    required String status,
+  }) async {
+    final db = await database;
+    final med = await db.query(
+      'medicamentos',
+      columns: ['usuarioId'],
+      where: 'id = ?',
       whereArgs: [medicamentoId],
     );
-  }
-}
+    final usuarioId = med.isNotEmpty ? (med.first['usuarioId'] as int?) ?? 0 : 0;
 
+    final jaExiste = await db.query(
+      'dose_confirmada',
+      where: 'medicamentoId = ? AND DATE(horarioConfirmacao) = DATE("now")',
+      whereArgs: [medicamentoId],
+    );
+
+    if (jaExiste.isEmpty) {
+      await db.insert('dose_confirmada', {
+        'medicamentoId': medicamentoId,
+        'usuarioId': usuarioId,
+        'horarioConfirmacao': DateTime.now().toIso8601String(),
+        'status': status,
+      });
+    } else {
+      await db.update(
+        'dose_confirmada',
+        {
+          'status': status,
+          'horarioConfirmacao': DateTime.now().toIso8601String(),
+        },
+        where:
+            'medicamentoId = ? AND DATE(horarioConfirmacao) = DATE("now")',
+        whereArgs: [medicamentoId],
+      );
+    }
+  }
 
   Future<List<Map<String, dynamic>>> getDosesConfirmadas(
       {int? usuarioId}) async {
@@ -257,76 +256,119 @@ class DatabaseHelper {
     return result;
   }
 
-  // ================= NOVO MÉTODO =================
+  // ================= PENDENTES =================
   Future<void> marcarPendentesComoNaoTomados() async {
-  final db = await database;
-  final agora = DateTime.now().toIso8601String();
+    final db = await database;
+    final agora = DateTime.now().toIso8601String();
 
-  // Busca medicamentos que já passaram do horário e ainda não foram marcados
-  final pendentes = await db.query(
-    'medicamentos',
-    where:
-        'dataHoraAgendamento < ? AND isTaken = 0 AND isIgnored = 0',
-    whereArgs: [agora],
-  );
-
-  for (var med in pendentes) {
-    final usuarioId = med['usuarioId'] ?? 0;
-
-    // Marca o medicamento como pendente
-    await db.update(
+    final pendentes = await db.query(
       'medicamentos',
-      {'isPendente': 1},
-      where: 'id = ?',
-      whereArgs: [med['id']],
+      where:
+          'dataHoraAgendamento < ? AND isTaken = 0 AND isIgnored = 0',
+      whereArgs: [agora],
     );
 
-    // Verifica se já existe um registro em dose_confirmada
-    final existe = await db.query(
-      'dose_confirmada',
-      where: 'medicamentoId = ? AND status = ?',
-      whereArgs: [med['id'], 'NÃO TOMADO'],
-      limit: 1,
-    );
+    for (var med in pendentes) {
+      final usuarioId = med['usuarioId'] ?? 0;
 
-    if (existe.isEmpty) {
-      // Insere um novo registro de dose não tomada
-      await db.insert('dose_confirmada', {
-        'medicamentoId': med['id'],
-        'usuarioId': usuarioId,
-        'horarioConfirmacao': agora,
-        'status': 'NÃO TOMADO',
-      });
+      await db.update(
+        'medicamentos',
+        {'isPendente': 1},
+        where: 'id = ?',
+        whereArgs: [med['id']],
+      );
+
+      final existe = await db.query(
+        'dose_confirmada',
+        where: 'medicamentoId = ? AND status = ?',
+        whereArgs: [med['id'], 'NÃO TOMADO'],
+        limit: 1,
+      );
+
+      if (existe.isEmpty) {
+        await db.insert('dose_confirmada', {
+          'medicamentoId': med['id'],
+          'usuarioId': usuarioId,
+          'horarioConfirmacao': agora,
+          'status': 'NÃO TOMADO',
+        });
+      }
     }
   }
-}
 
-
-  // ================= DEBUG / FECHAR =================
-  Future<void> debugListTables() async {
+  // ================= BACKUP / RESTAURAÇÃO =================
+  Future<String> exportarBackup() async {
     final db = await database;
-    final tables = await db
-        .rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
-    print("🧩 Tabelas encontradas no banco: $tables");
+
+    final usuarios = await db.query('usuarios');
+    final medicamentos = await db.query('medicamentos');
+    final tratamentos = await db.query('tratamentos');
+    final doses = await db.query('dose_confirmada');
+
+    final prefs = await SharedPreferences.getInstance();
+    final prefsData = <String, dynamic>{};
+    for (var key in prefs.getKeys()) {
+      prefsData[key] = prefs.get(key);
+    }
+
+    final backup = jsonEncode({
+      'usuarios': usuarios,
+      'medicamentos': medicamentos,
+      'tratamentos': tratamentos,
+      'doses_confirmadas': doses,
+      'shared_preferences': prefsData,
+    });
+
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File('${dir.path}/backup_pharmsync.json');
+    await file.writeAsString(backup);
+
+    return file.path;
   }
 
-  Future close() async {
+  Future<void> importarBackup(String caminho) async {
     final db = await database;
-    await db.close();
-    _database = null;
+    final file = File(caminho);
+    final data = jsonDecode(await file.readAsString());
+
+    await db.transaction((txn) async {
+      await txn.delete('dose_confirmada');
+      await txn.delete('tratamentos');
+      await txn.delete('medicamentos');
+      await txn.delete('usuarios');
+
+      for (var u in data['usuarios']) {
+        await txn.insert('usuarios', Map<String, dynamic>.from(u));
+      }
+      for (var m in data['medicamentos']) {
+        await txn.insert('medicamentos', Map<String, dynamic>.from(m));
+      }
+      for (var t in data['tratamentos']) {
+        await txn.insert('tratamentos', Map<String, dynamic>.from(t));
+      }
+      for (var d in data['doses_confirmadas']) {
+        await txn.insert('dose_confirmada', Map<String, dynamic>.from(d));
+      }
+    });
+
+    final prefs = await SharedPreferences.getInstance();
+    final prefsData = Map<String, dynamic>.from(data['shared_preferences']);
+    for (var key in prefsData.keys) {
+      final value = prefsData[key];
+      if (value is bool) prefs.setBool(key, value);
+      if (value is int) prefs.setInt(key, value);
+      if (value is double) prefs.setDouble(key, value);
+      if (value is String) prefs.setString(key, value);
+    }
   }
 
-  // Reinicialização do app
-Future<void> resetDatabase() async {
-  final db = await database; // usa o getter já definido lá em cima
-
-  // Apaga os dados das tabelas
-  await db.delete('dose_confirmada');
-  await db.delete('tratamentos');
-  await db.delete('medicamentos');
-  await db.delete('usuarios');
-
-  print("🧹 Todas as tabelas foram limpas com sucesso!");
+  // ================= RESET / DEBUG =================
+  Future<void> resetDatabase() async {
+    final db = await database;
+    await db.delete('dose_confirmada');
+    await db.delete('tratamentos');
+    await db.delete('medicamentos');
+    await db.delete('usuarios');
+    print("🧹 Todas as tabelas foram limpas com sucesso!");
+  }
 }
-}
-

@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/database_helper.dart';
 
@@ -97,6 +100,62 @@ class ConfiguracoesPage extends StatelessWidget {
           ),
 
           const SizedBox(height: 20),
+          const Divider(),
+          const SizedBox(height: 20),
+
+          // ☁️ Backup e Restauração
+          _buildSectionTitle('Backup e restauração', theme),
+          Card(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            elevation: 2,
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.backup_outlined, color: Colors.blueAccent),
+                  title: const Text(
+                    'Fazer backup local',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: const Text('Gera um arquivo .json com todos os dados do aplicativo.'),
+                  onTap: () async {
+                    final path = await DatabaseHelper.instance.exportarBackup();
+                    await Share.shareXFiles([XFile(path)], text: 'Backup do PharmSync');
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Backup criado com sucesso!')),
+                    );
+                  },
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.restore_page_outlined, color: Colors.green),
+                  title: const Text(
+                    'Restaurar backup',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: const Text('Importa os dados de um arquivo de backup .json.'),
+                  onTap: () async {
+                    final result = await FilePicker.platform.pickFiles(
+                      type: FileType.custom,
+                      allowedExtensions: ['json'],
+                    );
+
+                    if (result != null && result.files.single.path != null) {
+                      await DatabaseHelper.instance.importarBackup(result.files.single.path!);
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Backup restaurado com sucesso!')),
+                      );
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+          const Divider(),
+          const SizedBox(height: 20),
 
           // ⚠️ Reinicializar aplicativo
           _buildSectionTitle('Gerenciamento', theme),
@@ -162,7 +221,6 @@ class ConfiguracoesPage extends StatelessWidget {
             child: const Text('Cancelar'),
           ),
           ElevatedButton(
-            //style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Confirmar'),
           ),
