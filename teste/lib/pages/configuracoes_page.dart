@@ -116,7 +116,7 @@ class ConfiguracoesPage extends StatelessWidget {
                     'Fazer backup local',
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  subtitle: const Text('Gera um arquivo .json com todos os dados do aplicativo.'),
+                  subtitle: const Text('Gera um arquivo .bak com todos os dados do aplicativo.'),
                   onTap: () async {
                     final path = await DatabaseHelper.instance.exportarBackup();
                     await Share.shareXFiles([XFile(path)], text: 'Backup do PharmSync');
@@ -133,7 +133,7 @@ class ConfiguracoesPage extends StatelessWidget {
                     'Restaurar backup',
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  subtitle: const Text('Importa os dados de um arquivo de backup .json.'),
+                  subtitle: const Text('Importa os dados de um arquivo de backup .bak.'),
                   onTap: () async {
                     final result = await FilePicker.platform.pickFiles(
                       type: FileType.custom,

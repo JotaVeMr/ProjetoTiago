@@ -320,7 +320,7 @@ class DatabaseHelper {
     });
 
     final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/backup_pharmsync.json');
+    final file = File('${dir.path}/backup_pharmsync.bak');
     await file.writeAsString(backup);
 
     return file.path;
