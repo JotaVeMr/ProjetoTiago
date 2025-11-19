@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class Medicamento {
   int? id;
-  int? usuarioId; // 🔹 FK para o usuário dono do medicamento
+  int? usuarioId; //  FK para o usuário dono do medicamento
   String nome;
   String tipo;
   String dose;
@@ -15,7 +15,7 @@ class Medicamento {
 
   Medicamento({
     this.id,
-    this.usuarioId, // 🔹 vincula ao usuário
+    this.usuarioId, //  vincula ao usuário
     required this.nome,
     required this.tipo,
     required this.dose,
@@ -27,11 +27,11 @@ class Medicamento {
     this.isPendente = false,
   });
 
-  // 🔹 Para salvar no SQLite
+  //  Para salvar no SQLite
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'usuarioId': usuarioId, // 🔹 salva o vínculo
+      'usuarioId': usuarioId, //  salva o vínculo
       'nome': nome,
       'tipo': tipo,
       'dose': dose,
@@ -44,11 +44,11 @@ class Medicamento {
     };
   }
 
-  // 🔹 Para ler do SQLite
+  //  Para ler do SQLite
   factory Medicamento.fromMap(Map<String, dynamic> map) {
     return Medicamento(
       id: map['id'],
-      usuarioId: map['usuarioId'], // 🔹 carrega vínculo
+      usuarioId: map['usuarioId'], //  carrega vínculo
       nome: map['nome'] ?? '',
       tipo: map['tipo'] ?? '',
       dose: map['dose'] ?? '',
@@ -62,10 +62,10 @@ class Medicamento {
     );
   }
 
-  // 🔹 Para salvar no SharedPreferences (JSON)
+  //  Para salvar no SharedPreferences (JSON)
   Map<String, dynamic> toJson() => {
         'id': id,
-        'usuarioId': usuarioId, // 🔹 mantém vínculo no cache
+        'usuarioId': usuarioId, //  mantém vínculo no cache
         'nome': nome,
         'tipo': tipo,
         'dose': dose,
@@ -80,7 +80,7 @@ class Medicamento {
   static Medicamento fromJson(Map<String, dynamic> json) {
     return Medicamento(
       id: json['id'],
-      usuarioId: json['usuarioId'], // 🔹 recupera vínculo
+      usuarioId: json['usuarioId'], // recupera vínculo
       nome: json['nome'] ?? '',
       tipo: json['tipo'] ?? '',
       dose: json['dose'] ?? '',
@@ -94,7 +94,7 @@ class Medicamento {
     );
   }
 
-  // 🔹 Helpers
+  //  Helpers
   DateTime get scheduledDateTime {
     return DateTime.parse(dataHoraAgendamento);
   }
