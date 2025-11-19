@@ -47,7 +47,7 @@ class _RelatorioPageState extends State<RelatorioPage> {
   Future<void> _carregarRelatorio() async {
     setState(() => _loading = true);
 
-    // ✅ antes de tudo, atualiza os pendentes
+    
     await DatabaseHelper.instance.marcarPendentesComoNaoTomados();
 
     final db = await DatabaseHelper.instance.database;
@@ -169,7 +169,7 @@ class _RelatorioPageState extends State<RelatorioPage> {
                 ),
                 const Divider(),
 
-                // 🎯 Gráfico de pizza Tomados x Não Tomados
+                
                 if (total > 0)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -224,7 +224,7 @@ class _RelatorioPageState extends State<RelatorioPage> {
                         ),
                         const SizedBox(height: 8),
 
-                        // 🟩🟥 legenda colorida
+                        
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: const [

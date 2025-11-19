@@ -99,12 +99,12 @@ class _MyAppState extends State<MyApp> {
       supportedLocales: const [Locale('pt', 'BR')],
       locale: const Locale('pt', 'BR'),
 
-      // 🎨 Suporte a tema claro/escuro
+      //  suporte a tema claro/escuro
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
       themeMode: _isDarkTheme ? ThemeMode.dark : ThemeMode.light,
 
-      // 👇 Verifica se deve abrir Onboarding ou App normal
+      // verifica se deve abrir Onboarding ou App normal
       home: widget.onboardingDone
           ? Scaffold(
               body: pages[_selectedIndex],

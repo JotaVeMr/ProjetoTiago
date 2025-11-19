@@ -32,7 +32,7 @@ class ConfiguracoesPage extends StatelessWidget {
         children: [
           const SizedBox(height: 8),
 
-          // 🔧 Seção de personalização
+          //  personalização
           _buildSectionTitle('Personalização', theme),
           Card(
             elevation: 2,
@@ -59,7 +59,7 @@ class ConfiguracoesPage extends StatelessWidget {
           const Divider(),
           const SizedBox(height: 20),
 
-          // 💊 Seção sobre o aplicativo
+          
           _buildSectionTitle('Sobre o aplicativo', theme),
           Card(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -85,7 +85,7 @@ class ConfiguracoesPage extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          // 💡 Dicas de uso
+          
           Card(
             elevation: 2,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -116,15 +116,24 @@ class ConfiguracoesPage extends StatelessWidget {
                     'Fazer backup local',
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  subtitle: const Text('Gera um arquivo .bak com todos os dados do aplicativo.'),
+                  subtitle: const Text('Gera um arquivo .json com todos os dados do aplicativo.'),
                   onTap: () async {
                     final path = await DatabaseHelper.instance.exportarBackup();
-                    await Share.shareXFiles([XFile(path)], text: 'Backup do PharmSync');
+
                     if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Backup criado com sucesso!')),
-                    );
+
+                    
+                    // ScaffoldMessenger.of(context).showSnackBar(
+                    //   const SnackBar(
+                    //     content: Text('Arquivo de backup gerado. Escolha onde salvar.'),
+                    //     duration: Duration(seconds: 2),
+                    //   ),
+                    // );
+
+                    
+                    await Share.shareXFiles([XFile(path)], text: 'Backup do PharmSync');
                   },
+
                 ),
                 const Divider(height: 1),
                 ListTile(
@@ -133,7 +142,7 @@ class ConfiguracoesPage extends StatelessWidget {
                     'Restaurar backup',
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  subtitle: const Text('Importa os dados de um arquivo de backup .bak.'),
+                  subtitle: const Text('Importa os dados de um arquivo de backup .json.'),
                   onTap: () async {
                     final result = await FilePicker.platform.pickFiles(
                       type: FileType.custom,
@@ -157,7 +166,7 @@ class ConfiguracoesPage extends StatelessWidget {
           const Divider(),
           const SizedBox(height: 20),
 
-          // ⚠️ Reinicializar aplicativo
+          //  Reinicializar aplicativo
           _buildSectionTitle('Gerenciamento', theme),
           Card(
             color: Colors.red.shade50,
@@ -178,7 +187,7 @@ class ConfiguracoesPage extends StatelessWidget {
 
           const SizedBox(height: 32),
 
-          // ❤️ Assinatura visual
+          
           Center(
             child: Text(
               'PharmSync • Cuidando da sua rotina 💊',
