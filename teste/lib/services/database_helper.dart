@@ -37,7 +37,7 @@ class DatabaseHelper {
   }
 
   Future _createDB(Database db, int version) async {
-    // ====== USUÁRIOS ======
+    //  USUÁRIOS 
     await db.execute('''
       CREATE TABLE usuarios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,7 +48,7 @@ class DatabaseHelper {
       )
     ''');
 
-    // ====== MEDICAMENTOS ======
+    //  MEDICAMENTOS 
     await db.execute('''
       CREATE TABLE medicamentos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,7 +66,7 @@ class DatabaseHelper {
       )
     ''');
 
-    // ====== TRATAMENTOS ======
+    //  TRATAMENTOS 
     await db.execute('''
       CREATE TABLE tratamentos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -78,7 +78,7 @@ class DatabaseHelper {
       )
     ''');
 
-    // ====== DOSES CONFIRMADAS ======
+    //  DOSES CONFIRMADAS 
     await db.execute('''
       CREATE TABLE dose_confirmada (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
