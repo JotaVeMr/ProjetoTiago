@@ -7,30 +7,33 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+
 import 'pages/relatorio_page.dart';
 import 'pages/home_page.dart';
 import 'pages/tratamentos_page.dart';
 import 'pages/onboarding_page.dart';
 import 'pages/configuracoes_page.dart';
+import 'pages/configurar_perfil_page.dart';
+import 'services/database_helper.dart';
 import 'services/notification_service.dart';
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
+  // Inicialização de timezone e notificações
   tz.initializeTimeZones();
   tz.setLocalLocation(tz.getLocation('America/Sao_Paulo'));
   await NotificationService().init();
 
   final prefs = await SharedPreferences.getInstance();
-  final onboardingDone = prefs.getBool('onboarding_completed') ?? false;
 
-  // se não existir, significa "seguir o tema do sistema"
-  final isDarkTheme = prefs.getBool('isDarkTheme');
+  final onboardingDone = prefs.getBool('onboarding_completed') ?? false;
+  final savedTheme = prefs.getBool('isDarkTheme'); // null = sistema
 
   runApp(MyApp(
     onboardingDone: onboardingDone,
-    savedTheme: isDarkTheme, // null = seguir sistema
+    savedTheme: savedTheme,
   ));
 
   FlutterNativeSplash.remove();
@@ -38,7 +41,7 @@ void main() async {
 
 class MyApp extends StatefulWidget {
   final bool onboardingDone;
-  final bool? savedTheme; // null = sistema
+  final bool? savedTheme; // null = seguir sistema
 
   const MyApp({
     super.key,
@@ -69,12 +72,18 @@ class _MyAppState extends State<MyApp> {
     final prefs = await SharedPreferences.getInstance();
 
     if (themeValue == null) {
-      await prefs.remove('isDarkTheme'); // remove = segue sistema
+      await prefs.remove('isDarkTheme'); // volta a seguir o sistema
     } else {
       await prefs.setBool('isDarkTheme', themeValue);
     }
 
     setState(() => _manualTheme = themeValue);
+  }
+
+  /// Verifica se existe um perfil selecionado.
+  Future<bool> _hasUserSelected() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.containsKey('usuarioSelecionado');
   }
 
   @override
@@ -84,56 +93,76 @@ class _MyAppState extends State<MyApp> {
       TratamentosPage(),
       const RelatorioPage(),
       ConfiguracoesPage(
-        isDarkTheme: _manualTheme,   // ← agora aceita null
+        isDarkTheme: _manualTheme,
         onThemeChanged: _onThemeChanged,
       ),
     ];
 
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
+    return FutureBuilder<bool>(
+      future: _hasUserSelected(),
+      builder: (context, snapshot) {
+        // Ainda carregando
+        if (!snapshot.hasData) {
+          return const MaterialApp(
+            home: Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            ),
+          );
+        }
 
-      // ======= LOCALIZAÇÃO =======
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [Locale('pt', 'BR')],
-      locale: const Locale('pt', 'BR'),
+        final hasUser = snapshot.data!;
 
-      // ======= TEMAS =======
-      theme: ThemeData.light(),
-      darkTheme: ThemeData.dark(),
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
 
-      // regra principal do tema:
-      themeMode: _manualTheme == null
-          ? ThemeMode.system
-          : (_manualTheme! ? ThemeMode.dark : ThemeMode.light),
+          
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [Locale('pt', 'BR')],
+          locale: const Locale('pt', 'BR'),
 
-      // ======= HOME =======
-      home: widget.onboardingDone
-          ? Scaffold(
-              body: pages[_selectedIndex],
-              bottomNavigationBar: BottomNavigationBar(
-                currentIndex: _selectedIndex,
-                selectedItemColor: Colors.blue,
-                unselectedItemColor: Colors.grey,
-                onTap: (index) {
-                  setState(() => _selectedIndex = index);
-                },
-                items: const [
-                  BottomNavigationBarItem(
-                      icon: Icon(Icons.home), label: "Início"),
-                  BottomNavigationBarItem(
-                      icon: Icon(Icons.medication), label: "Medicamentos"),
-                  BottomNavigationBarItem(
-                      icon: Icon(Icons.bar_chart_outlined), label: "Relatórios"),
-                  BottomNavigationBarItem(
-                      icon: Icon(Icons.settings), label: "Configurações"),
-                ],
-              ),
-            )
-          : const OnboardingPage(),
+          
+          theme: ThemeData.light(),
+          darkTheme: ThemeData.dark(),
+
+          themeMode: _manualTheme == null
+              ? ThemeMode.system
+              : (_manualTheme! ? ThemeMode.dark : ThemeMode.light),
+
+          
+          home: widget.onboardingDone == false
+              ? const OnboardingPage()
+              : hasUser == false
+                  ? const ConfigurarPerfilPage()
+                  : Scaffold(
+                      body: pages[_selectedIndex],
+                      bottomNavigationBar: BottomNavigationBar(
+                        currentIndex: _selectedIndex,
+                        selectedItemColor: Colors.blue,
+                        unselectedItemColor: Colors.grey,
+                        onTap: (index) {
+                          setState(() => _selectedIndex = index);
+                        },
+                        items: const [
+                          BottomNavigationBarItem(
+                              icon: Icon(Icons.home), label: "Início"),
+                          BottomNavigationBarItem(
+                              icon: Icon(Icons.medication),
+                              label: "Medicamentos"),
+                          BottomNavigationBarItem(
+                              icon: Icon(Icons.bar_chart_outlined),
+                              label: "Relatórios"),
+                          BottomNavigationBarItem(
+                              icon: Icon(Icons.settings),
+                              label: "Configurações"),
+                        ],
+                      ),
+                    ),
+        );
+      },
     );
   }
 }
