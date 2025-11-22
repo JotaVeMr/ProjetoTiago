@@ -5,7 +5,7 @@ import 'package:local_auth/local_auth.dart';
 
 import '../models/usuario.dart';
 import '../services/database_helper.dart';
-import '../main.dart' as app; // ✅ usado para voltar ao MyApp após criar perfil
+import '../main.dart' as app;  
 
 class ConfigurarPerfilPage extends StatefulWidget {
   const ConfigurarPerfilPage({super.key});
@@ -41,7 +41,7 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
       nome: _nomeCtrl.text.trim(),
       sobrenome: _sobrenomeCtrl.text.trim(),
       sexo: _sexo,
-      pin: '', // não usamos mais PIN manual
+      pin: '',
       id: null,
     );
 
@@ -62,20 +62,20 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
       _sobrenomeCtrl.clear();
       setState(() => _sexo = Sexo.outro);
 
-      // ✅ Corrigido: mantém o tema atual salvo no SharedPreferences
+      // mantém tema salvo
       final isDarkTheme = prefs.getBool('isDarkTheme') ?? false;
 
-      // ✅ Volta para o app completo (MyApp) com o tema preservado
+      // retorna ao MyApp corretamente
       Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-          builder: (context) => app.MyApp(
-            onboardingDone: true,
-            isDarkTheme: isDarkTheme,
-          ),
-        ),
-        (route) => false,
-      );
+      context,
+      MaterialPageRoute(
+        builder: (context) => app.MyApp(
+        onboardingDone: true,
+        savedTheme: isDarkTheme,
+      ),
+    ),
+      (route) => false,
+    );
     }
   }
 
@@ -86,7 +86,6 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
     Navigator.pop(context, true);
   }
 
-  /// 🔒 Autenticação local antes da remoção (PIN/senha/padrão)
   Future<bool> _autenticarLocalmente() async {
     try {
       final isSupported = await _localAuth.isDeviceSupported();
@@ -99,21 +98,17 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
       debugPrint('availableBiometrics: $available');
       debugPrint('=========================');
 
-      if (!isSupported) {
-        debugPrint('Dispositivo não suporta autenticação local.');
-        return true; // permite se não for suportado
-      }
+      if (!isSupported) return true;
 
       final didAuthenticate = await _localAuth.authenticate(
         localizedReason: 'Confirme sua identidade para remover o perfil.',
         options: const AuthenticationOptions(
-          biometricOnly: false, // permite PIN/padrão do sistema
+          biometricOnly: false,
           stickyAuth: true,
           sensitiveTransaction: true,
         ),
       );
 
-      debugPrint('Resultado da autenticação: $didAuthenticate');
       return didAuthenticate;
     } catch (e) {
       debugPrint('Erro na autenticação local: $e');
@@ -186,8 +181,8 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Configurar perfil'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         elevation: 0,
       ),
       body: SafeArea(

@@ -152,8 +152,10 @@ class _TratamentosPageState extends State<TratamentosPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text("Tratamentos — $nome"),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
+        //backgroundColor: Colors.white,
+        //foregroundColor: Colors.black,
         elevation: 0,
       ),
       body: ListView.builder(

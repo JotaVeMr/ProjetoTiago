@@ -6,8 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/database_helper.dart';
 
 class ConfiguracoesPage extends StatelessWidget {
-  final bool isDarkTheme;
-  final ValueChanged<bool> onThemeChanged;
+  final bool? isDarkTheme; // null = sistema
+  final ValueChanged<bool?> onThemeChanged;
 
   const ConfiguracoesPage({
     super.key,
@@ -32,26 +32,38 @@ class ConfiguracoesPage extends StatelessWidget {
         children: [
           const SizedBox(height: 8),
 
-          //  personalização
+          // Personalização
           _buildSectionTitle('Personalização', theme),
           Card(
             elevation: 2,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: SwitchListTile(
-              secondary: Icon(
-                Icons.dark_mode_rounded,
-                color: isDarkTheme
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.outline,
-              ),
+            child: ListTile(
+              leading: Icon(Icons.dark_mode_rounded,
+                  color: theme.colorScheme.primary),
               title: const Text(
-                'Tema escuro',
+                'Tema do aplicativo',
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
-              subtitle: const Text('Ativar ou desativar o modo escuro'),
-              value: isDarkTheme,
-              activeColor: theme.colorScheme.primary,
-              onChanged: (value) => onThemeChanged(value),
+              subtitle: const Text('Escolha como o tema será aplicado'),
+              trailing: DropdownButton<bool?>(
+                value: isDarkTheme,
+                underline: Container(),
+                items: const [
+                  DropdownMenuItem(
+                    value: null,
+                    child: Text("Sistema"),
+                  ),
+                  DropdownMenuItem(
+                    value: false,
+                    child: Text("Claro"),
+                  ),
+                  DropdownMenuItem(
+                    value: true,
+                    child: Text("Escuro"),
+                  ),
+                ],
+                onChanged: onThemeChanged,
+              ),
             ),
           ),
 
@@ -59,7 +71,6 @@ class ConfiguracoesPage extends StatelessWidget {
           const Divider(),
           const SizedBox(height: 20),
 
-          
           _buildSectionTitle('Sobre o aplicativo', theme),
           Card(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -85,7 +96,6 @@ class ConfiguracoesPage extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          
           Card(
             elevation: 2,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -94,7 +104,7 @@ class ConfiguracoesPage extends StatelessWidget {
               title: Text('Dicas de uso'),
               subtitle: Text(
                 'Mantenha seus lembretes sempre atualizados e revise as datas '
-                'dos tratamentos periodicamente para evitar esquecimentos.',
+                'dos tratamentos periodicamente.',
               ),
             ),
           ),
@@ -103,7 +113,7 @@ class ConfiguracoesPage extends StatelessWidget {
           const Divider(),
           const SizedBox(height: 20),
 
-          // ☁️ Backup e Restauração
+          // Backup
           _buildSectionTitle('Backup e restauração', theme),
           Card(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -116,24 +126,12 @@ class ConfiguracoesPage extends StatelessWidget {
                     'Fazer backup local',
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  subtitle: const Text('Gera um arquivo .json com todos os dados do aplicativo.'),
+                  subtitle: const Text('Gera um arquivo .json com os dados.'),
                   onTap: () async {
                     final path = await DatabaseHelper.instance.exportarBackup();
-
                     if (!context.mounted) return;
-
-                    
-                    // ScaffoldMessenger.of(context).showSnackBar(
-                    //   const SnackBar(
-                    //     content: Text('Arquivo de backup gerado. Escolha onde salvar.'),
-                    //     duration: Duration(seconds: 2),
-                    //   ),
-                    // );
-
-                    
                     await Share.shareXFiles([XFile(path)], text: 'Backup do PharmSync');
                   },
-
                 ),
                 const Divider(height: 1),
                 ListTile(
@@ -142,7 +140,7 @@ class ConfiguracoesPage extends StatelessWidget {
                     'Restaurar backup',
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  subtitle: const Text('Importa os dados de um arquivo de backup .json.'),
+                  subtitle: const Text('Importa os dados de um arquivo .json.'),
                   onTap: () async {
                     final result = await FilePicker.platform.pickFiles(
                       type: FileType.custom,
@@ -166,7 +164,7 @@ class ConfiguracoesPage extends StatelessWidget {
           const Divider(),
           const SizedBox(height: 20),
 
-          //  Reinicializar aplicativo
+          // Reset
           _buildSectionTitle('Gerenciamento', theme),
           Card(
             color: Colors.red.shade50,
@@ -187,7 +185,6 @@ class ConfiguracoesPage extends StatelessWidget {
 
           const SizedBox(height: 32),
 
-          
           Center(
             child: Text(
               'PharmSync • Cuidando da sua rotina 💊',

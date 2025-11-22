@@ -601,8 +601,10 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
+        //backgroundColor: Colors.white,
+        //foregroundColor: Colors.black,
         elevation: 0,
         leadingWidth: 140,
         leading: InkWell(
@@ -643,19 +645,31 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         title: RichText(
-          text: const TextSpan(
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            children: <TextSpan>[
-              TextSpan(text: 'pharm', style: TextStyle(color: Colors.blue)),
-              TextSpan(text: 'Sync', style: TextStyle(color: Colors.black)),
-            ],
+            text: TextSpan(
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              children: [
+                TextSpan(
+                  text: 'pharm',
+                  style: TextStyle(color: Colors.blue),
+                ),
+                TextSpan(
+                  text: 'Sync',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onBackground,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings, color: Colors.black54),
-            onPressed: _navigateToConfigurarPerfilPage, // gerenciar perfis
+            icon: Icon(
+              Icons.settings,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+            onPressed: _navigateToConfigurarPerfilPage,
           ),
         ],
       ),

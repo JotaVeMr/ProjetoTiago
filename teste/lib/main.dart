@@ -14,27 +14,23 @@ import 'pages/onboarding_page.dart';
 import 'pages/configuracoes_page.dart';
 import 'services/notification_service.dart';
 
-
-
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
-  // Inicializa timezone e notificações
   tz.initializeTimeZones();
   tz.setLocalLocation(tz.getLocation('America/Sao_Paulo'));
   await NotificationService().init();
 
-  //  Verifica se é a primeira inicialização
   final prefs = await SharedPreferences.getInstance();
   final onboardingDone = prefs.getBool('onboarding_completed') ?? false;
 
-  //  Carrega o tema salvo (true = escuro, false = claro)
-  final isDarkTheme = prefs.getBool('isDarkTheme') ?? false;
+  // se não existir, significa "seguir o tema do sistema"
+  final isDarkTheme = prefs.getBool('isDarkTheme');
 
   runApp(MyApp(
     onboardingDone: onboardingDone,
-    isDarkTheme: isDarkTheme,
+    savedTheme: isDarkTheme, // null = seguir sistema
   ));
 
   FlutterNativeSplash.remove();
@@ -42,12 +38,12 @@ void main() async {
 
 class MyApp extends StatefulWidget {
   final bool onboardingDone;
-  final bool isDarkTheme;
+  final bool? savedTheme; // null = sistema
 
   const MyApp({
     super.key,
     required this.onboardingDone,
-    required this.isDarkTheme,
+    required this.savedTheme,
   });
 
   @override
@@ -56,41 +52,47 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   int _selectedIndex = 0;
-  late bool _isDarkTheme;
+
+  /// null  = seguir sistema  
+  /// true  = forçar tema escuro  
+  /// false = forçar tema claro
+  bool? _manualTheme;
 
   @override
   void initState() {
     super.initState();
-    _isDarkTheme = widget.isDarkTheme;
+    _manualTheme = widget.savedTheme;
   }
 
-  void _onThemeChanged(bool value) async {
+  /// Atualiza tema (null = sistema)
+  void _onThemeChanged(bool? themeValue) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isDarkTheme', value);
-    setState(() => _isDarkTheme = value);
+
+    if (themeValue == null) {
+      await prefs.remove('isDarkTheme'); // remove = segue sistema
+    } else {
+      await prefs.setBool('isDarkTheme', themeValue);
+    }
+
+    setState(() => _manualTheme = themeValue);
   }
-  
 
   @override
   Widget build(BuildContext context) {
-    //  Agora criamos as páginas *aqui*, com o tema já definido
     final List<Widget> pages = [
       const HomePage(),
       TratamentosPage(),
-      RelatorioPage(),
+      const RelatorioPage(),
       ConfiguracoesPage(
-        isDarkTheme: _isDarkTheme,
+        isDarkTheme: _manualTheme,   // ← agora aceita null
         onThemeChanged: _onThemeChanged,
       ),
-      
     ];
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
 
-      
-
-      //  Localização configurada
+      // ======= LOCALIZAÇÃO =======
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -99,12 +101,16 @@ class _MyAppState extends State<MyApp> {
       supportedLocales: const [Locale('pt', 'BR')],
       locale: const Locale('pt', 'BR'),
 
-      //  suporte a tema claro/escuro
+      // ======= TEMAS =======
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
-      themeMode: _isDarkTheme ? ThemeMode.dark : ThemeMode.light,
 
-      // verifica se deve abrir Onboarding ou App normal
+      // regra principal do tema:
+      themeMode: _manualTheme == null
+          ? ThemeMode.system
+          : (_manualTheme! ? ThemeMode.dark : ThemeMode.light),
+
+      // ======= HOME =======
       home: widget.onboardingDone
           ? Scaffold(
               body: pages[_selectedIndex],
@@ -124,7 +130,6 @@ class _MyAppState extends State<MyApp> {
                       icon: Icon(Icons.bar_chart_outlined), label: "Relatórios"),
                   BottomNavigationBarItem(
                       icon: Icon(Icons.settings), label: "Configurações"),
-                  
                 ],
               ),
             )
