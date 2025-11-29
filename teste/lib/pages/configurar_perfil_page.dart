@@ -5,7 +5,7 @@ import 'package:local_auth/local_auth.dart';
 
 import '../models/usuario.dart';
 import '../services/database_helper.dart';
-import '../main.dart' as app;  
+import '../main.dart';
 
 class ConfigurarPerfilPage extends StatefulWidget {
   const ConfigurarPerfilPage({super.key});
@@ -48,6 +48,7 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
     final id = await DatabaseHelper.instance.insertUsuario(novo);
     if (id != 0) {
       final criado = novo.copyWith(id: id);
+
       setState(() => _usuarios.add(criado));
 
       final prefs = await SharedPreferences.getInstance();
@@ -62,18 +63,10 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
       _sobrenomeCtrl.clear();
       setState(() => _sexo = Sexo.outro);
 
-      // mantém tema salvo
-      final isDarkTheme = prefs.getBool('isDarkTheme') ?? false;
-
-      // retorna ao MyApp corretamente
+      
       Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(
-        builder: (context) => app.MyApp(
-        onboardingDone: true,
-        savedTheme: isDarkTheme,
-      ),
-    ),
+      MaterialPageRoute(builder: (context) => const MyApp()),
       (route) => false,
     );
     }
@@ -83,6 +76,7 @@ class _ConfigurarPerfilPageState extends State<ConfigurarPerfilPage> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('usuarioSelecionado', jsonEncode(u.toMap()));
     if (!mounted) return;
+
     Navigator.pop(context, true);
   }
 

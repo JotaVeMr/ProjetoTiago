@@ -1,5 +1,4 @@
 // lib/main.dart
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -14,40 +13,24 @@ import 'pages/tratamentos_page.dart';
 import 'pages/onboarding_page.dart';
 import 'pages/configuracoes_page.dart';
 import 'pages/configurar_perfil_page.dart';
-import 'services/database_helper.dart';
 import 'services/notification_service.dart';
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
-  // Inicialização de timezone e notificações
+  // Inicialização
   tz.initializeTimeZones();
   tz.setLocalLocation(tz.getLocation('America/Sao_Paulo'));
   await NotificationService().init();
 
-  final prefs = await SharedPreferences.getInstance();
-
-  final onboardingDone = prefs.getBool('onboarding_completed') ?? false;
-  final savedTheme = prefs.getBool('isDarkTheme'); // null = sistema
-
-  runApp(MyApp(
-    onboardingDone: onboardingDone,
-    savedTheme: savedTheme,
-  ));
+  runApp(const MyApp());
 
   FlutterNativeSplash.remove();
 }
 
 class MyApp extends StatefulWidget {
-  final bool onboardingDone;
-  final bool? savedTheme; // null = seguir sistema
-
-  const MyApp({
-    super.key,
-    required this.onboardingDone,
-    required this.savedTheme,
-  });
+  const MyApp({super.key});
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -56,23 +39,27 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   int _selectedIndex = 0;
 
-  /// null  = seguir sistema  
-  /// true  = forçar tema escuro  
-  /// false = forçar tema claro
+  /// null = tema do sistema
+  /// true = dark
+  /// false = light
   bool? _manualTheme;
 
-  @override
-  void initState() {
-    super.initState();
-    _manualTheme = widget.savedTheme;
+  Future<Map<String, dynamic>> _loadInit() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    return {
+      'onboardingDone': prefs.getBool('onboarding_completed') ?? false,
+      'hasUser': prefs.containsKey('usuarioSelecionado'),
+      'theme': prefs.getBool('isDarkTheme'), // null = seguir sistema
+    };
   }
 
-  /// Atualiza tema (null = sistema)
+  /// Atualiza tema em tempo real
   void _onThemeChanged(bool? themeValue) async {
     final prefs = await SharedPreferences.getInstance();
 
     if (themeValue == null) {
-      await prefs.remove('isDarkTheme'); // volta a seguir o sistema
+      await prefs.remove('isDarkTheme');
     } else {
       await prefs.setBool('isDarkTheme', themeValue);
     }
@@ -80,28 +67,11 @@ class _MyAppState extends State<MyApp> {
     setState(() => _manualTheme = themeValue);
   }
 
-  /// Verifica se existe um perfil selecionado.
-  Future<bool> _hasUserSelected() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.containsKey('usuarioSelecionado');
-  }
-
   @override
   Widget build(BuildContext context) {
-    final List<Widget> pages = [
-      const HomePage(),
-      TratamentosPage(),
-      const RelatorioPage(),
-      ConfiguracoesPage(
-        isDarkTheme: _manualTheme,
-        onThemeChanged: _onThemeChanged,
-      ),
-    ];
-
-    return FutureBuilder<bool>(
-      future: _hasUserSelected(),
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _loadInit(),
       builder: (context, snapshot) {
-        // Ainda carregando
         if (!snapshot.hasData) {
           return const MaterialApp(
             home: Scaffold(
@@ -110,12 +80,26 @@ class _MyAppState extends State<MyApp> {
           );
         }
 
-        final hasUser = snapshot.data!;
+        final onboardingDone = snapshot.data!['onboardingDone'] as bool;
+        final hasUser = snapshot.data!['hasUser'] as bool;
+        final savedTheme = snapshot.data!['theme'] as bool?;
+
+        // 🔹 o tema é sempre recarregado aqui
+        _manualTheme = savedTheme;
+
+        final List<Widget> pages = [
+          const HomePage(),
+          TratamentosPage(),
+          const RelatorioPage(),
+          ConfiguracoesPage(
+            isDarkTheme: _manualTheme,
+            onThemeChanged: _onThemeChanged,
+          ),
+        ];
 
         return MaterialApp(
           debugShowCheckedModeBanner: false,
 
-          
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
@@ -124,7 +108,6 @@ class _MyAppState extends State<MyApp> {
           supportedLocales: const [Locale('pt', 'BR')],
           locale: const Locale('pt', 'BR'),
 
-          
           theme: ThemeData.light(),
           darkTheme: ThemeData.dark(),
 
@@ -132,8 +115,7 @@ class _MyAppState extends State<MyApp> {
               ? ThemeMode.system
               : (_manualTheme! ? ThemeMode.dark : ThemeMode.light),
 
-          
-          home: widget.onboardingDone == false
+          home: onboardingDone == false
               ? const OnboardingPage()
               : hasUser == false
                   ? const ConfigurarPerfilPage()
@@ -143,9 +125,7 @@ class _MyAppState extends State<MyApp> {
                         currentIndex: _selectedIndex,
                         selectedItemColor: Colors.blue,
                         unselectedItemColor: Colors.grey,
-                        onTap: (index) {
-                          setState(() => _selectedIndex = index);
-                        },
+                        onTap: (index) => setState(() => _selectedIndex = index),
                         items: const [
                           BottomNavigationBarItem(
                               icon: Icon(Icons.home), label: "Início"),
