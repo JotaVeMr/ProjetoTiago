@@ -123,7 +123,7 @@ class ConfiguracoesPage extends StatelessWidget {
                 ListTile(
                   leading: const Icon(Icons.backup_outlined, color: Colors.blueAccent),
                   title: const Text(
-                    'Fazer backup local',
+                    'Fazer backup',
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                   subtitle: const Text('Gera um arquivo .json com os dados.'),

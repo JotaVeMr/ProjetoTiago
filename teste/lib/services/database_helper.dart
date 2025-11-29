@@ -8,7 +8,6 @@ import '../models/medicamento.dart';
 import '../models/usuario.dart';
 import 'package:intl/intl.dart';
 
-
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
@@ -27,7 +26,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 7,
+      version: 8, // 🔹 ATUALIZADO PARA 8
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -62,6 +61,7 @@ class DatabaseHelper {
         isTaken INTEGER DEFAULT 0,
         isIgnored INTEGER DEFAULT 0,
         isPendente INTEGER DEFAULT 0,
+        fotoPath TEXT,              
         FOREIGN KEY (usuarioId) REFERENCES usuarios(id) ON DELETE CASCADE
       )
     ''');
@@ -106,9 +106,14 @@ class DatabaseHelper {
         )
       ''');
     }
+
+    // 🔹 NOVA VERSÃO: adiciona coluna fotoPath se for banco antigo
+    if (oldVersion < 8) {
+      await db.execute('ALTER TABLE medicamentos ADD COLUMN fotoPath TEXT');
+    }
   }
 
-  //  USUÁRIOS 
+  //  ================= USUÁRIOS =================
   Future<int> insertUsuario(Usuario usuario) async {
     final db = await database;
     return await db.insert(
@@ -148,7 +153,7 @@ class DatabaseHelper {
     return await db.delete('usuarios', where: 'id = ?', whereArgs: [id]);
   }
 
-  //  MEDICAMENTOS 
+  //  ================= MEDICAMENTOS =================
   Future<int> insertMedicamento(Medicamento med) async {
     final db = await database;
     final id = await db.insert(
@@ -187,7 +192,7 @@ class DatabaseHelper {
     return maps.map((m) => Medicamento.fromMap(m)).toList();
   }
 
-  // TRATAMENTOS 
+  //  ================= TRATAMENTOS =================
   Future<int> insertTratamento(Map<String, dynamic> t) async {
     final db = await database;
     return await db.insert('tratamentos', t,
@@ -204,59 +209,58 @@ class DatabaseHelper {
     return await db.delete('tratamentos', where: 'id = ?', whereArgs: [id]);
   }
 
-  //  DOSES CONFIRMADAS 
-        Future<void> registrarDose({
-        required int medicamentoId,
-        required String status,
-      }) async {
-        final db = await database;
+  //  ================= DOSES CONFIRMADAS =================
+  Future<void> registrarDose({
+    required int medicamentoId,
+    required String status,
+  }) async {
+    final db = await database;
 
-        // garantindo status padronizado
-        status = status.toUpperCase().trim();
+    // garantindo status padronizado
+    status = status.toUpperCase().trim();
 
-        final hoje = DateTime.now();
-        final dataHoje = DateFormat("yyyy-MM-dd").format(hoje);
+    final hoje = DateTime.now();
+    final dataHoje = DateFormat("yyyy-MM-dd").format(hoje);
 
-        final jaExiste = await db.query(
-          'dose_confirmada',
-          where: '''
+    final jaExiste = await db.query(
+      'dose_confirmada',
+      where: '''
             medicamentoId = ? 
             AND substr(horarioConfirmacao, 1, 10) = ?
           ''',
-          whereArgs: [medicamentoId, dataHoje],
-        );
+      whereArgs: [medicamentoId, dataHoje],
+    );
 
-        // Descobre o usuário
-        final med = await db.query(
-          'medicamentos',
-          where: 'id = ?',
-          whereArgs: [medicamentoId],
-        );
+    // Descobre o usuário
+    final med = await db.query(
+      'medicamentos',
+      where: 'id = ?',
+      whereArgs: [medicamentoId],
+    );
 
-        final usuarioId = med.isNotEmpty ? (med.first['usuarioId'] as int) : 0;
+    final usuarioId = med.isNotEmpty ? (med.first['usuarioId'] as int) : 0;
 
-        if (jaExiste.isEmpty) {
-          // INSERE
-          await db.insert('dose_confirmada', {
-            'medicamentoId': medicamentoId,
-            'usuarioId': usuarioId,
-            'horarioConfirmacao': hoje.toIso8601String(),
-            'status': status,
-          });
-        } else {
-          // ATUALIZA
-          await db.update(
-            'dose_confirmada',
-            {
-              'status': status,
-              'horarioConfirmacao': hoje.toIso8601String(),
-            },
-            where: 'id = ?',
-            whereArgs: [jaExiste.first['id']],
-          );
-        }
-      }
-
+    if (jaExiste.isEmpty) {
+      // INSERE
+      await db.insert('dose_confirmada', {
+        'medicamentoId': medicamentoId,
+        'usuarioId': usuarioId,
+        'horarioConfirmacao': hoje.toIso8601String(),
+        'status': status,
+      });
+    } else {
+      // ATUALIZA
+      await db.update(
+        'dose_confirmada',
+        {
+          'status': status,
+          'horarioConfirmacao': hoje.toIso8601String(),
+        },
+        where: 'id = ?',
+        whereArgs: [jaExiste.first['id']],
+      );
+    }
+  }
 
   Future<List<Map<String, dynamic>>> getDosesConfirmadas(
       {int? usuarioId}) async {
@@ -271,15 +275,14 @@ class DatabaseHelper {
     return result;
   }
 
-  // PENDENTES 
+  //  ================= PENDENTES =================
   Future<void> marcarPendentesComoNaoTomados() async {
     final db = await database;
     final agora = DateTime.now().toIso8601String();
 
     final pendentes = await db.query(
       'medicamentos',
-      where:
-          'dataHoraAgendamento < ? AND isTaken = 0 AND isIgnored = 0',
+      where: 'dataHoraAgendamento < ? AND isTaken = 0 AND isIgnored = 0',
       whereArgs: [agora],
     );
 
@@ -311,7 +314,7 @@ class DatabaseHelper {
     }
   }
 
-  //  BACKUP / RESTAURAÇÃO 
+  //  ================= BACKUP / RESTAURAÇÃO =================
   Future<String> exportarBackup() async {
     final db = await database;
 

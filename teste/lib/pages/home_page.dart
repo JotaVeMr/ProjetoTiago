@@ -14,6 +14,7 @@ import '../services/database_helper.dart';
 import '../services/app_event_bus.dart';
 import 'add_medicamento_page.dart';
 import 'configurar_perfil_page.dart';
+import 'dart:io';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -756,95 +757,135 @@ class _HomePageState extends State<HomePage> {
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10)),
                         child: ListTile(
-                          contentPadding: const EdgeInsets.all(16),
-                          title: Text(
-                            med.nome,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 18),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "${med.tipo} - ${med.dose} - ${med.scheduledTimeOfDay.format(context)}",
-                                style: const TextStyle(color: Colors.grey),
-                              ),
-                              Text(
-                                "Tratamento: ${DateFormat('dd/MM/yyyy').format(DateTime.parse(med.dataInicio))} até ${DateFormat('dd/MM/yyyy').format(DateTime.parse(med.dataFim))}",
-                                style: const TextStyle(
-                                    color: Color.fromARGB(136, 58, 67, 112), //mudei a cor da Tratamento(Tema dark estava muito escuro)
-                                    fontStyle: FontStyle.italic,
-                                    fontSize: 13),
-                              ),
-                              if (med.isTaken)
-                                const Padding(
-                                  padding: EdgeInsets.only(top: 4.0),
-                                  child: Text(
-                                    "Tomado",
-                                    style: TextStyle(
-                                        color: Colors.green,
-                                        fontWeight: FontWeight.bold),
+                        contentPadding: const EdgeInsets.all(16),
+
+                        // ============================
+                        // FOTO NO INÍCIO DO CARD
+                        // ============================
+                        leading: (med.fotoPath != null && med.fotoPath!.trim().isNotEmpty)
+                            ? InkWell(
+                                onTap: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (_) {
+                                      return Dialog(
+                                        child: InteractiveViewer(
+                                          child: Image.file(
+                                            File(med.fotoPath!),
+                                            fit: BoxFit.contain,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.file(
+                                    File(med.fotoPath!),
+                                    width: 60,
+                                    height: 60,
+                                    fit: BoxFit.cover,
                                   ),
                                 ),
-                              if (med.isIgnored)
-                                const Padding(
-                                  padding: EdgeInsets.only(top: 4.0),
-                                  child: Text(
-                                    "Esquecido",
-                                    style: TextStyle(
-                                        color: Colors.orange,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                              if (med.isPendente)
-                                const Padding(
-                                  padding: EdgeInsets.only(top: 4.0),
-                                  child: Text(
-                                    "Pendente",
-                                    style: TextStyle(
-                                        color: Colors.red,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          trailing: PopupMenuButton<String>(
-                            onSelected: (v) async {
-                              if (usuarioSelecionado == null) return;
-                              if (v == 'copy_one') {
-                                final texto = _montarResumoMedicamentos(
-                                  perfil: usuarioSelecionado!,
-                                  meds: [med],
-                                  dia: med.scheduledDateTime,
-                                );
-                                await Clipboard.setData(
-                                    ClipboardData(text: texto));
-                                if (!mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Texto copiado')),
-                                );
-                              } else if (v == 'share_one') {
-                                final texto = _montarResumoMedicamentos(
-                                  perfil: usuarioSelecionado!,
-                                  meds: [med],
-                                  dia: med.scheduledDateTime,
-                                );
-                                await Share.share(texto);
-                              }
-                            },
-                            itemBuilder: (context) => const [
-                              PopupMenuItem(
-                                value: 'copy_one',
-                                child: Text('Copiar'),
-                              ),
-                              PopupMenuItem(
-                                value: 'share_one',
-                                child: Text('Compartilhar'),
-                              ),
-                            ],
-                          ),
-                          onTap: () => _showMedicamentoActions(med, index),
+                              )
+                            : const Icon(Icons.medication, size: 40),
+
+                        title: Text(
+                          med.nome,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 18),
                         ),
+
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "${med.tipo} - ${med.dose} - ${med.scheduledTimeOfDay.format(context)}",
+                              style: const TextStyle(color: Colors.grey),
+                            ),
+                            Text(
+                              "Tratamento: ${DateFormat('dd/MM/yyyy').format(DateTime.parse(med.dataInicio))}"
+                              " até ${DateFormat('dd/MM/yyyy').format(DateTime.parse(med.dataFim))}",
+                              style: const TextStyle(
+                                color: Color.fromARGB(136, 58, 67, 112),
+                                fontStyle: FontStyle.italic,
+                                fontSize: 13),
+                            ),
+
+                            if (med.isTaken)
+                              const Padding(
+                                padding: EdgeInsets.only(top: 4.0),
+                                child: Text(
+                                  "Tomado",
+                                  style: TextStyle(
+                                      color: Colors.green,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ),
+
+                            if (med.isIgnored)
+                              const Padding(
+                                padding: EdgeInsets.only(top: 4.0),
+                                child: Text(
+                                  "Esquecido",
+                                  style: TextStyle(
+                                      color: Colors.orange,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ),
+
+                            if (med.isPendente)
+                              const Padding(
+                                padding: EdgeInsets.only(top: 4.0),
+                                child: Text(
+                                  "Pendente",
+                                  style: TextStyle(
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                          ],
+                        ),
+
+                        // BOTÃO DE TRÊS PONTOS (cópia e compartilhar)
+                        trailing: PopupMenuButton<String>(
+                          onSelected: (v) async {
+                            if (usuarioSelecionado == null) return;
+                            if (v == 'copy_one') {
+                              final texto = _montarResumoMedicamentos(
+                                perfil: usuarioSelecionado!,
+                                meds: [med],
+                                dia: med.scheduledDateTime,
+                              );
+                              await Clipboard.setData(ClipboardData(text: texto));
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Texto copiado')),
+                              );
+                            } else if (v == 'share_one') {
+                              final texto = _montarResumoMedicamentos(
+                                perfil: usuarioSelecionado!,
+                                meds: [med],
+                                dia: med.scheduledDateTime,
+                              );
+                              await Share.share(texto);
+                            }
+                          },
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(
+                              value: 'copy_one',
+                              child: Text('Copiar'),
+                            ),
+                            PopupMenuItem(
+                              value: 'share_one',
+                              child: Text('Compartilhar'),
+                            ),
+                          ],
+                        ),
+
+                        onTap: () => _showMedicamentoActions(med, index),
+                      ),
                       );
                     },
                   ),
