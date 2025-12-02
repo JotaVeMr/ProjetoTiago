@@ -289,7 +289,7 @@ class _AddMedicamentoPageState extends State<AddMedicamentoPage> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.grey.shade400),
-                  color: Colors.grey.shade100,
+                  color: const Color.fromARGB(255, 170, 170, 170),
                 ),
                 child: _fotoFile != null
                     ? ClipRRect(

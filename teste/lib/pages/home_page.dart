@@ -309,9 +309,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ==== UTILITÁRIOS DE TEXTO / COMPARTILHAMENTO ====
-
-  /// Monta um texto com 1 ou mais medicamentos.
   String _montarResumoMedicamentos({
     required Usuario perfil,
     required List<Medicamento> meds,
@@ -758,10 +755,6 @@ class _HomePageState extends State<HomePage> {
                             borderRadius: BorderRadius.circular(10)),
                         child: ListTile(
                         contentPadding: const EdgeInsets.all(16),
-
-                        // ============================
-                        // FOTO NO INÍCIO DO CARD
-                        // ============================
                         leading: (med.fotoPath != null && med.fotoPath!.trim().isNotEmpty)
                             ? InkWell(
                                 onTap: () {
@@ -805,13 +798,17 @@ class _HomePageState extends State<HomePage> {
                               style: const TextStyle(color: Colors.grey),
                             ),
                             Text(
-                              "Tratamento: ${DateFormat('dd/MM/yyyy').format(DateTime.parse(med.dataInicio))}"
-                              " até ${DateFormat('dd/MM/yyyy').format(DateTime.parse(med.dataFim))}",
-                              style: const TextStyle(
-                                color: Color.fromARGB(136, 58, 67, 112),
-                                fontStyle: FontStyle.italic,
-                                fontSize: 13),
+                            "Tratamento: ${DateFormat('dd/MM/yyyy').format(DateTime.parse(med.dataInicio))} até ${DateFormat('dd/MM/yyyy').format(DateTime.parse(med.dataFim))}",
+                            style: TextStyle(
+                              color: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.color
+                                  ?.withOpacity(0.8), 
+                              fontStyle: FontStyle.italic,
+                              fontSize: 13,
                             ),
+                          ),
 
                             if (med.isTaken)
                               const Padding(
