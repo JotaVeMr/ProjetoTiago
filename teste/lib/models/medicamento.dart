@@ -16,7 +16,7 @@ class Medicamento {
   bool isIgnored;
   bool isPendente;
 
-  /// 🔹 Caminho local do arquivo da foto (opcional)
+
   String? fotoPath;
 
   Medicamento({
@@ -34,9 +34,8 @@ class Medicamento {
     this.fotoPath, // ← novo
   });
 
-  // ============================================================
-  // 🔹 SALVAR NO SQLITE
-  // ============================================================
+  
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -58,9 +57,7 @@ class Medicamento {
     };
   }
 
-  // ============================================================
-  // 🔹 LER DO SQLITE
-  // ============================================================
+ 
   factory Medicamento.fromMap(Map<String, dynamic> map) {
     return Medicamento(
       id: map['id'],
@@ -85,9 +82,7 @@ class Medicamento {
     );
   }
 
-  // ============================================================
-  // 🔹 SALVAR EM JSON (SharedPreferences)
-  // ============================================================
+ 
   Map<String, dynamic> toJson() => {
         'id': id,
         'usuarioId': usuarioId,
@@ -107,9 +102,7 @@ class Medicamento {
         'fotoPath': fotoPath, // ← NOVO
       };
 
-  // ============================================================
-  // 🔹 LER DO JSON
-  // ============================================================
+  
   static Medicamento fromJson(Map<String, dynamic> json) {
     return Medicamento(
       id: json['id'],
