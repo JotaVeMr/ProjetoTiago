@@ -19,14 +19,21 @@ void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
-  // Inicialização
-  tz.initializeTimeZones();
-  tz.setLocalLocation(tz.getLocation('America/Sao_Paulo'));
-  await NotificationService().init();
-
+  //  Inicia o app imediatamente
   runApp(const MyApp());
 
-  FlutterNativeSplash.remove();
+  //   Carrega tudo pesado depois
+  Future(() async {
+    try {
+      tz.initializeTimeZones();
+      tz.setLocalLocation(tz.getLocation('America/Sao_Paulo'));
+      await NotificationService().init();
+    } catch (e) {
+      print("Erro ao iniciar serviços: $e");
+    }
+
+    FlutterNativeSplash.remove();
+  });
 }
 
 class MyApp extends StatefulWidget {
@@ -38,10 +45,6 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   int _selectedIndex = 0;
-
-  /// null = tema do sistema
-  /// true = dark
-  /// false = light
   bool? _manualTheme;
 
   Future<Map<String, dynamic>> _loadInit() async {
@@ -50,11 +53,10 @@ class _MyAppState extends State<MyApp> {
     return {
       'onboardingDone': prefs.getBool('onboarding_completed') ?? false,
       'hasUser': prefs.containsKey('usuarioSelecionado'),
-      'theme': prefs.getBool('isDarkTheme'), // null = seguir sistema
+      'theme': prefs.getBool('isDarkTheme'),
     };
   }
 
-  /// Atualiza tema em tempo real
   void _onThemeChanged(bool? themeValue) async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -64,7 +66,9 @@ class _MyAppState extends State<MyApp> {
       await prefs.setBool('isDarkTheme', themeValue);
     }
 
-    setState(() => _manualTheme = themeValue);
+    setState(() {
+      _manualTheme = themeValue;
+    });
   }
 
   @override
@@ -82,12 +86,9 @@ class _MyAppState extends State<MyApp> {
 
         final onboardingDone = snapshot.data!['onboardingDone'] as bool;
         final hasUser = snapshot.data!['hasUser'] as bool;
-        final savedTheme = snapshot.data!['theme'] as bool?;
+        _manualTheme = snapshot.data!['theme'] as bool?;
 
-        // 🔹 o tema é sempre recarregado aqui
-        _manualTheme = savedTheme;
-
-        final List<Widget> pages = [
+        final pages = [
           const HomePage(),
           TratamentosPage(),
           const RelatorioPage(),
@@ -99,7 +100,6 @@ class _MyAppState extends State<MyApp> {
 
         return MaterialApp(
           debugShowCheckedModeBanner: false,
-
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
@@ -110,7 +110,6 @@ class _MyAppState extends State<MyApp> {
 
           theme: ThemeData.light(),
           darkTheme: ThemeData.dark(),
-
           themeMode: _manualTheme == null
               ? ThemeMode.system
               : (_manualTheme! ? ThemeMode.dark : ThemeMode.light),
@@ -125,7 +124,9 @@ class _MyAppState extends State<MyApp> {
                         currentIndex: _selectedIndex,
                         selectedItemColor: Colors.blue,
                         unselectedItemColor: Colors.grey,
-                        onTap: (index) => setState(() => _selectedIndex = index),
+                        onTap: (index) {
+                          setState(() => _selectedIndex = index);
+                        },
                         items: const [
                           BottomNavigationBarItem(
                               icon: Icon(Icons.home), label: "Início"),
